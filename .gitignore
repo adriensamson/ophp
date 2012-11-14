@@ -2,6 +2,6 @@
 *.cmo
 main
 lexer.ml
-lexer.mli
 parser.ml
+parser.mli
 *~
