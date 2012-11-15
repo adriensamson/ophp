@@ -2,8 +2,8 @@ echo 3 * 1 + 1 * 2. ;
 
 echo 45;
 
-function truc () {
-    echo 98;
+function truc ($a, $b) {
+    echo $a + $b;
 }
 
-truc () ;
+truc (90, 8) ;

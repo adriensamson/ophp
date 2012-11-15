@@ -3,7 +3,7 @@
 
 %token <float> T_DNUMBER
 %token <int> T_LNUMBER
-%token <string> T_STRING
+%token <string> T_STRING T_VARIABLE
 %token TT_MUL TT_DIV TT_PLUS TT_MINUS TT_SEMI_COLON TT_LEFT_PAR TT_RIGHT_PAR TT_LEFT_BRACKET TT_RIGHT_BRACKET TT_COMMA
 %token T_ECHO T_FUNCTION
 %token END
@@ -31,18 +31,21 @@ stmt:
 
 argument_list_definition:
       { [] }
+    | identifier { [$1] }
     | identifier TT_COMMA argument_list_definition { $1::$3 }
 
 identifier:
-      T_STRING { $1 }
+      T_VARIABLE { $1 }
       
 argument_list_call:
       { [] }
+    | expr { [$1] }
     | expr TT_COMMA argument_list_call { $1::$3 }
 
 expr:
       T_DNUMBER { Ast.ConstValue (Ast.Double $1) }
     | T_LNUMBER { Ast.ConstValue (Ast.Long $1) }
+    | T_VARIABLE { Ast.Variable $1 }
     | expr TT_PLUS expr { Ast.Plus ($1, $3) }
     | expr TT_MINUS expr { Ast.Minus ($1, $3) }
     | expr TT_MUL expr { Ast.Mult ($1, $3) }

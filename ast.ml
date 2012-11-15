@@ -9,6 +9,7 @@ type expr =
     | Mult of expr * expr
     | Div of expr * expr
     | FunctionCall of string * expr list
+    | Variable of string
 
 type stmt =
     | Echo of expr
@@ -23,21 +24,24 @@ let eval_binary opLong opDouble val1 val2 = match (val1, val2) with
     | (Double a, Long b) -> Double (opDouble a (float_of_int b))
     | (Double a, Double b) -> Double (opDouble a b)
 
-let rec eval e = match e with
+let rec eval v e = match e with
     | ConstValue f -> f
-    | Plus (f, g) -> eval_binary (+) (+.) (eval f) (eval g)
-    | Minus (f, g) -> eval_binary (-) (-.) (eval f) (eval g)
-    | Mult (f, g) -> eval_binary ( * ) ( *. ) (eval f) (eval g)
-    | Div (f, g) -> eval_binary (/) (/.) (eval f) (eval g)
-    | FunctionCall (name, argList) -> let (_, code) = Hashtbl.find functions name in List.iter exec code; Long 0
+    | Plus (f, g) -> eval_binary (+) (+.) (eval v f) (eval v g)
+    | Minus (f, g) -> eval_binary (-) (-.) (eval v f) (eval v g)
+    | Mult (f, g) -> eval_binary ( * ) ( *. ) (eval v f) (eval v g)
+    | Div (f, g) -> eval_binary (/) (/.) (eval v f) (eval v g)
+    | Variable s -> Hashtbl.find v s
+    | FunctionCall (name, argValues) -> let (argNames, code) = Hashtbl.find functions name in
+        let local_vars = Hashtbl.create 10 in
+        List.iter2 (fun name value -> Hashtbl.add local_vars name (eval v value)) argNames argValues;
+        List.iter (exec local_vars) code; Long 0
 
-and exec s = match s with
-    | IgnoreResult e -> let _ = eval e in ()
+and exec v s = match s with
+    | IgnoreResult e -> let _ = eval v e in ()
     | FunctionDef (name, argList, code) -> Hashtbl.add functions name (argList, code)
-    | Echo e -> begin match (eval e) with
+    | Echo e -> begin match (eval v e) with
             | Double f -> print_float f
             | Long i -> print_int i
         end;
         print_newline ()
 
-;;

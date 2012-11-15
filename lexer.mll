@@ -25,6 +25,7 @@ rule token = parse
     | digit+ "." digit* as num { T_DNUMBER (float_of_string num) }
     
     | ident as s { T_STRING s }
+    | '$' ident as s { T_VARIABLE (String.sub s 1 (String.length s - 1)) }
     
     | _ { token lexbuf }
     | eof { END }
