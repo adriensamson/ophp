@@ -1,8 +1,34 @@
-ocamllex lexer.mll
-ocamlyacc parser.mly
-ocamlc -c ast.ml
-ocamlc -c parser.mli
-ocamlc -c lexer.ml
-ocamlc -c parser.ml
-ocamlc -c main.ml
-ocamlc -o main ast.cmo lexer.cmo parser.cmo main.cmo
+#!/bin/sh
+
+set -e
+
+TARGET=main
+FLAGS=""
+OCAMLBUILD=ocamlbuild
+
+ocb()
+{
+  $OCAMLBUILD $FLAGS $*
+}
+
+rule() {
+  case $1 in
+    clean)  ocb -clean;;
+    native) ocb $TARGET.native;;
+    byte)   ocb $TARGET.byte;;
+    all)    ocb $TARGET.native $TARGET.byte;;
+    depend) echo "Not needed.";;
+    *)      echo "Unknown action $1";;
+  esac;
+}
+
+if [ $# -eq 0 ]; then
+  rule all
+else
+  while [ $# -gt 0 ]; do
+    rule $1;
+    shift
+  done
+fi
+
+

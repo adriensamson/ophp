@@ -1,7 +1,4 @@
-*.cmi
-*.cmo
-main
-lexer.ml
-parser.ml
-parser.mli
+main.native
+main.byte
+_build
 *~
