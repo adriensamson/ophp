@@ -3,7 +3,7 @@
 set -e
 
 TARGET=main
-FLAGS="-Is language"
+FLAGS=""
 OCAMLBUILD=ocamlbuild
 
 ocb()
