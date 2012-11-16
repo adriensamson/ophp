@@ -6,7 +6,7 @@ open Language
 %token <int> T_LNUMBER
 %token <string> T_STRING T_VARIABLE
 %token TT_MUL TT_DIV TT_PLUS TT_MINUS TT_SEMI_COLON TT_LEFT_PAR TT_RIGHT_PAR TT_LEFT_BRACKET TT_RIGHT_BRACKET TT_COMMA
-%token T_ECHO T_FUNCTION
+%token T_ECHO T_FUNCTION T_RETURN
 %token END
 
 %left PLUS MINUS
@@ -27,6 +27,7 @@ stmt_list:
 stmt:
       T_ECHO expr TT_SEMI_COLON		{ Ast.Echo ($2) }
     | expr TT_SEMI_COLON		{ Ast.IgnoreResult ($1) }
+    | T_RETURN expr TT_SEMI_COLON       { Ast.Return ($2) }
     | T_FUNCTION T_STRING TT_LEFT_PAR argument_list_definition TT_RIGHT_PAR TT_LEFT_BRACKET stmt_list TT_RIGHT_BRACKET { Ast.FunctionDef ($2, $4, $7) }
 
 

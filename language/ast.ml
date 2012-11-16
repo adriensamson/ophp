@@ -9,5 +9,6 @@ type expr =
 
 type stmt =
     | Echo of expr
+    | Return of expr
     | IgnoreResult of expr
     | FunctionDef of string * string list * stmt list
