@@ -7,11 +7,21 @@ type exec_return =
 
 let functions = Hashtbl.create 10
 
-let rec eval_binary opLong opDouble val1 val2 = match (to_numeric val1, to_numeric val2) with
+let eval_binary opLong opDouble val1 val2 = match (to_numeric val1, to_numeric val2) with
     | (`Long a, `Long b) -> `Long (opLong a b)
     | (`Long a, `Double b) -> `Double (opDouble (float_of_int a) b)
     | (`Double a, `Long b) -> `Double (opDouble a (float_of_int b))
     | (`Double a, `Double b) -> `Double (opDouble a b)
+
+let boolean_operator op val1 val2 =
+    let `Bool b1 = to_bool val1
+    and `Bool b2 = to_bool val2 in
+    `Bool (op b1 b2)
+
+let bitwise_operator op val1 val2 =
+    let `Long i1 = to_long val1
+    and `Long i2 = to_long val2 in
+    `Long (op i1 i2)
 
 let rec eval v e = match e with
     | ConstValue f -> f
@@ -19,6 +29,15 @@ let rec eval v e = match e with
     | Minus (f, g) -> eval_binary (-) (-.) (eval v f) (eval v g)
     | Mult (f, g) -> eval_binary ( * ) ( *. ) (eval v f) (eval v g)
     | Div (f, g) -> eval_binary (/) (/.) (eval v f) (eval v g)
+    | Mod (f, g) -> eval_binary (mod) (mod_float) (eval v f) (eval v g)
+    | And (f, g) -> boolean_operator (&&) (eval v f) (eval v g)
+    | Or (f, g) -> boolean_operator (||) (eval v f) (eval v g)
+    | Xor (f, g) -> boolean_operator (!=) (eval v f) (eval v g)
+    | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
+    | BitwiseAnd (f, g) -> bitwise_operator (land) (eval v f) (eval v g)
+    | BitwiseOr (f, g) -> bitwise_operator (lor) (eval v f) (eval v g)
+    | BitwiseXor (f, g) -> bitwise_operator (lxor) (eval v f) (eval v g)
+    | Assign (s, f) -> let g = eval v f in Hashtbl.replace v s g; g
     | Variable s -> Hashtbl.find v s
     | FunctionCall (name, argValues) -> let (argNames, code) = Hashtbl.find functions name in
         let local_vars = Hashtbl.create 10 in

@@ -7,3 +7,6 @@ function truc ($a, $b) {
 }
 
 echo truc (90, 8) ;
+
+$e = 77;
+echo $e;
