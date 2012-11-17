@@ -7,7 +7,7 @@ type exec_return =
 
 let functions = Hashtbl.create 10
 
-let eval_binary opLong opDouble val1 val2 = match (val1, val2) with
+let rec eval_binary opLong opDouble val1 val2 = match (to_numeric val1, to_numeric val2) with
     | (Long a, Long b) -> Long (opLong a b)
     | (Long a, Double b) -> Double (opDouble (float_of_int a) b)
     | (Double a, Long b) -> Double (opDouble a (float_of_int b))
@@ -24,7 +24,7 @@ let rec eval v e = match e with
         let local_vars = Hashtbl.create 10 in
         List.iter2 (fun name value -> Hashtbl.add local_vars name (eval v value)) argNames argValues;
         match exec_list local_vars code with
-            | NoOp -> Long 0
+            | NoOp -> Null
             | Return v -> v
 
 and exec v s = match s with
@@ -32,6 +32,8 @@ and exec v s = match s with
     | Language.Ast.Return e -> Return (eval v e)
     | FunctionDef (name, argList, code) -> Hashtbl.add functions name (argList, code); NoOp
     | Echo e -> begin match (eval v e) with
+            | Null -> ()
+            | Bool b -> print_string (string_of_bool b)
             | Double f -> print_float f
             | Long i -> print_int i
         end;

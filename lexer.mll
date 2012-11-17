@@ -19,6 +19,9 @@ rule token = parse
     | "echo" { T_ECHO }
     | "function" { T_FUNCTION }
     | "return" { T_RETURN }
+    | "null" { T_NULL }
+    | "false" { T_FALSE }
+    | "true" { T_TRUE }
     
     | digit+ as num { T_LNUMBER (int_of_string num) }
     
