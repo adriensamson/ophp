@@ -45,11 +45,11 @@ argument_list_call:
     | expr TT_COMMA argument_list_call { $1::$3 }
 
 expr:
-      T_DNUMBER { Ast.ConstValue (Typing.Double $1) }
-    | T_LNUMBER { Ast.ConstValue (Typing.Long $1) }
-    | T_NULL { Ast.ConstValue (Typing.Null) }
-    | T_FALSE { Ast.ConstValue (Typing.Bool false) }
-    | T_TRUE { Ast.ConstValue (Typing.Bool true) }
+      T_DNUMBER { Ast.ConstValue (`Double $1) }
+    | T_LNUMBER { Ast.ConstValue (`Long $1) }
+    | T_NULL { Ast.ConstValue (`Null) }
+    | T_FALSE { Ast.ConstValue (`Bool false) }
+    | T_TRUE { Ast.ConstValue (`Bool true) }
     | T_VARIABLE { Ast.Variable $1 }
     | expr TT_PLUS expr { Ast.Plus ($1, $3) }
     | expr TT_MINUS expr { Ast.Minus ($1, $3) }
