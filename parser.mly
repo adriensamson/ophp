@@ -4,7 +4,7 @@ open Language
 
 %token <float> T_DNUMBER
 %token <int> T_LNUMBER
-%token <string> T_STRING T_VARIABLE
+%token <string> T_STRING T_VARIABLE TT_CONSTANT_STRING
 
 %token TT_MUL TT_DIV TT_PLUS TT_MINUS TT_SEMI_COLON TT_LEFT_PAR TT_RIGHT_PAR TT_LEFT_BRACKET TT_RIGHT_BRACKET TT_LEFT_BRACE TT_RIGHT_BRACE TT_COMMA TT_TILDE TT_AT TT_EXCL TT_MOD TT_CONCAT TT_EQUAL TT_INTEROGATION TT_DOUBLE_COLON TT_BITWISE_OR TT_BITWISE_XOR TT_BITWISE_AND TT_GREATER TT_SMALLER
 
@@ -74,6 +74,7 @@ expr:
     | T_NULL { Ast.ConstValue (`Null) }
     | T_FALSE { Ast.ConstValue (`Bool false) }
     | T_TRUE { Ast.ConstValue (`Bool true) }
+    | TT_CONSTANT_STRING { Ast.ConstValue (`String $1) }
     | T_VARIABLE { Ast.Variable $1 }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
     | expr TT_PLUS expr { Ast.Plus ($1, $3) }

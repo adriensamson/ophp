@@ -3,7 +3,7 @@
 set -e
 
 TARGET=main
-FLAGS=""
+FLAGS="-libs str"
 OCAMLBUILD=ocamlbuild
 
 ocb()

@@ -1,5 +1,9 @@
 {
-  open Parser
+    open Parser
+
+    let unescape_simple_quotes s =
+        let regexp = Str.regexp "\\\\'" in
+        Str.global_replace regexp "'" s
 }
 let digit = ['0'-'9']
 let ident = ['a'-'z' 'A'-'Z' '_' '\x7f'-'\xff']['a'-'z' 'A'-'Z' '0'-'9' '_' '\x7f'-'\xff']*
@@ -81,6 +85,8 @@ rule token = parse
     
     | "." digit+
     | digit+ "." digit* as num { T_DNUMBER (float_of_string num) }
+    
+    | "'" ([^'\'']|"\\'")* "'" as s { TT_CONSTANT_STRING (unescape_simple_quotes (String.sub s 1 (String.length s - 2))) }
     
     | ident as s { T_STRING s }
     | '$' ident as s { T_VARIABLE (String.sub s 1 (String.length s - 1)) }

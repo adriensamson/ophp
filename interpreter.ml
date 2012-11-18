@@ -30,6 +30,7 @@ let rec eval v e = match e with
     | Mult (f, g) -> eval_binary ( * ) ( *. ) (eval v f) (eval v g)
     | Div (f, g) -> eval_binary (/) (/.) (eval v f) (eval v g)
     | Mod (f, g) -> eval_binary (mod) (mod_float) (eval v f) (eval v g)
+    | Concat (f, g) -> let `String s1 = to_string (eval v f) and `String s2 = to_string (eval v g) in `String (s1 ^ s2)
     | And (f, g) -> boolean_operator (&&) (eval v f) (eval v g)
     | Or (f, g) -> boolean_operator (||) (eval v f) (eval v g)
     | Xor (f, g) -> boolean_operator (!=) (eval v f) (eval v g)
@@ -52,6 +53,7 @@ and exec v s = match s with
     | FunctionDef (name, argList, code) -> Hashtbl.add functions name (argList, code); NoOp
     | Echo e -> begin match (eval v e) with
             | `Null -> ()
+            | `String s -> print_string s
             | `Bool b -> print_string (string_of_bool b)
             | `Double f -> print_float f
             | `Long i -> print_int i

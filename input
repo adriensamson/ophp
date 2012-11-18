@@ -10,3 +10,7 @@ echo truc (90, 8) ;
 
 $e = 77;
 echo $e;
+
+$str = 'pl\'op';
+
+echo $str . ' ' . $str;
