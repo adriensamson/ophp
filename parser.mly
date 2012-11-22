@@ -52,21 +52,25 @@ stmt:
       T_ECHO expr TT_SEMI_COLON		{ Ast.Echo ($2) }
     | expr TT_SEMI_COLON		{ Ast.IgnoreResult ($1) }
     | T_RETURN expr TT_SEMI_COLON       { Ast.Return ($2) }
-    | T_FUNCTION T_STRING TT_LEFT_PAR argument_list_definition TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, $4, $7) }
+    | T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, $4, $7) }
 
 
-argument_list_definition:
+argument_definition_list:
       { [] }
+    | argument_definition_tail { $1 }
+argument_definition_tail:
     | identifier { [$1] }
-    | identifier TT_COMMA argument_list_definition { $1::$3 }
+    | identifier TT_COMMA argument_definition_tail { $1::$3 }
 
 identifier:
       T_VARIABLE { $1 }
       
-argument_list_call:
+argument_call_list:
       { [] }
+    | argument_call_tail { $1 }
+argument_call_tail:
     | expr { [$1] }
-    | expr TT_COMMA argument_list_call { $1::$3 }
+    | expr TT_COMMA argument_call_tail { $1::$3 }
 
 expr:
       T_DNUMBER { Ast.ConstValue (`Double $1) }
@@ -89,11 +93,11 @@ expr:
     | expr T_LOGICAL_OR expr { Ast.Or ($1, $3) }
     | expr T_LOGICAL_XOR expr { Ast.Xor ($1, $3) }
     | expr TT_BITWISE_AND expr { Ast.BitwiseAnd ($1, $3) }
-    | expr TT_BITWISE_AND expr { Ast.BitwiseOr ($1, $3) }
+    | expr TT_BITWISE_OR expr { Ast.BitwiseOr ($1, $3) }
     | expr TT_BITWISE_XOR expr { Ast.BitwiseXor ($1, $3) }
     | TT_EXCL expr { Ast.Not ($2) }
     | T_VARIABLE TT_EQUAL expr { Ast.Assign ($1, $3) }
     | T_VARIABLE T_PLUS_EQUAL expr { Ast.Assign ($1, Ast.Plus (Ast.Variable $1, $3)) }
-    | T_STRING TT_LEFT_PAR argument_list_call TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
+    | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
 ;
 %%
