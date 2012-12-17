@@ -79,6 +79,10 @@ array_content_list:
     | expr T_DOUBLE_ARROW expr { [($1, $3)] }
     | expr T_DOUBLE_ARROW expr TT_COMMA array_content_list { ($1, $3)::$5 }
 
+offset_list:
+      TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { ($2, []) }
+    | TT_LEFT_BRACKET expr TT_RIGHT_BRACKET offset_list { let (last, l) = $4 in (last, $2::l) }
+
 expr:
       T_DNUMBER { Ast.ConstValue (`Double $1) }
     | T_LNUMBER { Ast.ConstValue (`Long $1) }
@@ -107,6 +111,7 @@ expr:
     | T_VARIABLE T_PLUS_EQUAL expr { Ast.Assign ($1, Ast.Plus (Ast.Variable $1, $3)) }
     | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
-    | expr TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffsetGet ($1, $3) }
+    | T_VARIABLE TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffsetGet (Ast.Variable $1, $3) }
+    | T_VARIABLE offset_list TT_EQUAL expr { let (last, l) = $2 in Ast.ArrayOffsetSet ($1, l, last, $4) }
 ;
 %%

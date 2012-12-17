@@ -20,3 +20,6 @@ $array = array (1 => 2, $e => truc (2, 3));
 echo $array[1];
 echo $array[$e];
 
+$array[null] = 7;
+echo $array[78];
+

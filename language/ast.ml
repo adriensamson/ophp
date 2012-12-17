@@ -18,7 +18,7 @@ type expr =
     | Assign of string * expr
     | ArrayConstructor of (expr * expr) list
     | ArrayOffsetGet of expr * expr
-
+    | ArrayOffsetSet of string * expr list * expr * expr
 
 type stmt =
     | Echo of expr

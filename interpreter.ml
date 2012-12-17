@@ -49,12 +49,32 @@ let rec eval v e = match e with
                 | Return v -> v
     end
     | ArrayConstructor l -> let phpArray = new phpArray in
-        List.iter (fun (e1, e2) -> let `String offset = to_string (eval v e1) in phpArray#offsetSet offset (eval v e2)) l;
+        let addElement (e1, e2) = match eval v e1 with
+            | `Null -> phpArray#offsetSet None (eval v e2)
+            | o -> let `String offset = to_string o in phpArray#offsetSet (Some offset) (eval v e2)
+        in
+        List.iter addElement l;
         `Array phpArray
-    | ArrayOffsetGet (e1, e2) ->
+    | ArrayOffsetGet (e1, e2) -> begin
         match eval v e1 with
             | `Array a -> let `String offset = to_string (eval v e2) in a#offsetGet offset
             | _ -> raise BadType
+    end
+    | ArrayOffsetSet (varName, offsetsExpr, lastOffsetExpr, valueExpr) ->
+        let value = eval v valueExpr in
+        let foldOffsets = fun a b -> match a with
+            | `Array a ->
+                let `String offset = to_string (eval v b) in
+                a#offsetGet offset
+            | _ -> raise BadType
+        in
+        match List.fold_left foldOffsets (Hashtbl.find v varName) offsetsExpr with
+            | `Array a -> begin match eval v lastOffsetExpr with
+                | `Null -> a#offsetSet None value
+                | o -> let `String offset = to_string o in a#offsetSet (Some offset) value
+            end; value
+            | _ -> raise BadType
+        
         
 and exec v s = match s with
     | IgnoreResult e -> let _ = eval v e in NoOp
