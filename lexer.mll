@@ -63,6 +63,8 @@ rule token = parse
     | ">=" { T_IS_GREATER_OR_EQUAL }
     | "<=" { T_IS_SMALLER_OR_EQUAL }
     
+    | "=>" { T_DOUBLE_ARROW }
+    
     | "echo" { T_ECHO }
     | "function" { T_FUNCTION }
     | "return" { T_RETURN }
@@ -72,6 +74,7 @@ rule token = parse
     | "clone" { T_CLONE }
     | "new" { T_NEW }
     | "instanceof" { T_INSTANCEOF }
+    | "array" { T_ARRAY }
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
     | '(' ' '* ("double"|"float") ' '* ')' { T_DOUBLE_CAST }

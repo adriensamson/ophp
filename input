@@ -14,3 +14,9 @@ echo $e;
 $str = 'pl\'op';
 
 echo $str . ' ' . $str;
+
+$array = array (1 => 2, $e => truc (2, 3));
+
+echo $array[1];
+echo $array[$e];
+

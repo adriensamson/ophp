@@ -40,13 +40,22 @@ let rec eval v e = match e with
     | BitwiseXor (f, g) -> bitwise_operator (lxor) (eval v f) (eval v g)
     | Assign (s, f) -> let g = eval v f in Hashtbl.replace v s g; g
     | Variable s -> Hashtbl.find v s
-    | FunctionCall (name, argValues) -> let (argNames, code) = Hashtbl.find functions name in
-        let local_vars = Hashtbl.create 10 in
-        List.iter2 (fun name value -> Hashtbl.add local_vars name (eval v value)) argNames argValues;
-        match exec_list local_vars code with
-            | NoOp -> `Null
-            | Return v -> v
-
+    | FunctionCall (name, argValues) -> begin
+        let (argNames, code) = Hashtbl.find functions name in
+            let local_vars = Hashtbl.create 10 in
+            List.iter2 (fun name value -> Hashtbl.add local_vars name (eval v value)) argNames argValues;
+            match exec_list local_vars code with
+                | NoOp -> `Null
+                | Return v -> v
+    end
+    | ArrayConstructor l -> let phpArray = new phpArray in
+        List.iter (fun (e1, e2) -> let `String offset = to_string (eval v e1) in phpArray#offsetSet offset (eval v e2)) l;
+        `Array phpArray
+    | ArrayOffsetGet (e1, e2) ->
+        match eval v e1 with
+            | `Array a -> let `String offset = to_string (eval v e2) in a#offsetGet offset
+            | _ -> raise BadType
+        
 and exec v s = match s with
     | IgnoreResult e -> let _ = eval v e in NoOp
     | Language.Ast.Return e -> Return (eval v e)
@@ -57,6 +66,7 @@ and exec v s = match s with
             | `Bool b -> print_string (string_of_bool b)
             | `Double f -> print_float f
             | `Long i -> print_int i
+            | `Array _ -> print_string "Array(...)"
         end;
         print_newline ();
         NoOp

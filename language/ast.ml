@@ -16,6 +16,8 @@ type expr =
     | BitwiseXor of expr * expr
     | Not of expr
     | Assign of string * expr
+    | ArrayConstructor of (expr * expr) list
+    | ArrayOffsetGet of expr * expr
 
 
 type stmt =
