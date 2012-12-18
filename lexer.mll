@@ -1,5 +1,9 @@
 {
     open Parser
+    
+    type currentRule = Outer | Token
+    
+    let currentRule = ref Outer
 
     let unescape_simple_quotes s =
         let regexp = Str.regexp "\\\\'" in
@@ -7,8 +11,16 @@
 }
 let digit = ['0'-'9']
 let ident = ['a'-'z' 'A'-'Z' '_' '\x7f'-'\xff']['a'-'z' 'A'-'Z' '0'-'9' '_' '\x7f'-'\xff']*
-rule token = parse
+
+rule outer = parse
+    | "<?php" { currentRule := Token; token lexbuf }
+    | ([^'<'] | ('<' [^'?']) | ("<?" [^'p']) | ("<?p" [^'h']) | ("<?ph" [^'p']))* as html { T_INLINE_HTML html }
+    | eof { END }
+
+and token = parse
     | [' ' '\t' '\n']	{ token lexbuf }
+    
+    | "?>" { currentRule := Outer; outer lexbuf }
     
     | ';' { TT_SEMI_COLON }
     | '+' { TT_PLUS }
@@ -96,4 +108,9 @@ rule token = parse
     
     | _ { token lexbuf }
     | eof { END }
-  
+
+{
+    let parse lexbuf = match !currentRule with
+        | Outer -> outer lexbuf
+        | Token -> token lexbuf
+}

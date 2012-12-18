@@ -4,7 +4,7 @@ set -e
 
 TARGET=main
 FLAGS="-libs str"
-FLAGS="$FLAGS -yaccflag -v"
+FLAGS="$FLAGS -yaccflag -v -lflag -g"
 OCAMLBUILD=ocamlbuild
 
 ocb()
