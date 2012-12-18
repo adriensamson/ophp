@@ -79,9 +79,9 @@ array_content_list:
     | expr T_DOUBLE_ARROW expr { [($1, $3)] }
     | expr T_DOUBLE_ARROW expr TT_COMMA array_content_list { ($1, $3)::$5 }
 
-offset_list:
-      TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { ($2, []) }
-    | TT_LEFT_BRACKET expr TT_RIGHT_BRACKET offset_list { let (last, l) = $4 in (last, $2::l) }
+assignable:
+    | T_VARIABLE { Ast.Variable $1 }
+    | assignable TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, $3) }
 
 expr:
       T_DNUMBER { Ast.ConstValue (`Double $1) }
@@ -90,7 +90,6 @@ expr:
     | T_FALSE { Ast.ConstValue (`Bool false) }
     | T_TRUE { Ast.ConstValue (`Bool true) }
     | TT_CONSTANT_STRING { Ast.ConstValue (`String $1) }
-    | T_VARIABLE { Ast.Variable $1 }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
     | expr TT_PLUS expr { Ast.Plus ($1, $3) }
     | expr TT_MINUS expr { Ast.Minus ($1, $3) }
@@ -107,11 +106,10 @@ expr:
     | expr TT_BITWISE_OR expr { Ast.BitwiseOr ($1, $3) }
     | expr TT_BITWISE_XOR expr { Ast.BitwiseXor ($1, $3) }
     | TT_EXCL expr { Ast.Not ($2) }
-    | T_VARIABLE TT_EQUAL expr { Ast.Assign ($1, $3) }
-    | T_VARIABLE T_PLUS_EQUAL expr { Ast.Assign ($1, Ast.Plus (Ast.Variable $1, $3)) }
+    | assignable TT_EQUAL expr { Ast.Assign ($1, $3) }
+    | assignable T_PLUS_EQUAL expr { Ast.Assign ($1, Ast.Plus (Ast.Assignable $1, $3)) }
     | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
-    | T_VARIABLE TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffsetGet (Ast.Variable $1, $3) }
-    | T_VARIABLE offset_list TT_EQUAL expr { let (last, l) = $2 in Ast.ArrayOffsetSet ($1, l, last, $4) }
+    | assignable { Ast.Assignable $1 }
 ;
 %%

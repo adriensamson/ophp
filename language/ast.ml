@@ -1,6 +1,6 @@
 type expr =
     | ConstValue of Typing.value
-    | Variable of string
+    | Assignable of assignable
     | FunctionCall of string * expr list
     | Plus of expr * expr
     | Minus of expr * expr
@@ -15,10 +15,11 @@ type expr =
     | BitwiseOr of expr * expr
     | BitwiseXor of expr * expr
     | Not of expr
-    | Assign of string * expr
+    | Assign of assignable * expr
     | ArrayConstructor of (expr * expr) list
-    | ArrayOffsetGet of expr * expr
-    | ArrayOffsetSet of string * expr list * expr * expr
+and assignable =
+    | Variable of string
+    | ArrayOffset of assignable * expr
 
 type stmt =
     | Echo of expr

@@ -25,6 +25,7 @@ let bitwise_operator op val1 val2 =
 
 let rec eval v e = match e with
     | ConstValue f -> f
+    | Assignable a -> eval_assignable v a
     | Plus (f, g) -> eval_binary (+) (+.) (eval v f) (eval v g)
     | Minus (f, g) -> eval_binary (-) (-.) (eval v f) (eval v g)
     | Mult (f, g) -> eval_binary ( * ) ( *. ) (eval v f) (eval v g)
@@ -38,8 +39,6 @@ let rec eval v e = match e with
     | BitwiseAnd (f, g) -> bitwise_operator (land) (eval v f) (eval v g)
     | BitwiseOr (f, g) -> bitwise_operator (lor) (eval v f) (eval v g)
     | BitwiseXor (f, g) -> bitwise_operator (lxor) (eval v f) (eval v g)
-    | Assign (s, f) -> let g = eval v f in Hashtbl.replace v s g; g
-    | Variable s -> Hashtbl.find v s
     | FunctionCall (name, argValues) -> begin
         let (argNames, code) = Hashtbl.find functions name in
             let local_vars = Hashtbl.create 10 in
@@ -55,26 +54,23 @@ let rec eval v e = match e with
         in
         List.iter addElement l;
         `Array phpArray
-    | ArrayOffsetGet (e1, e2) -> begin
-        match eval v e1 with
-            | `Array a -> let `String offset = to_string (eval v e2) in a#offsetGet offset
+    | Assign (a, f) -> begin match a with
+        | Variable s -> let g = eval v f in Hashtbl.replace v s g; g
+        | ArrayOffset (a, o) ->
+            let arr = match eval_assignable v a with `Array arr -> arr | _ -> raise BadType in
+            let value = eval v f in
+            begin match eval v o with
+                | `Null -> arr#offsetSet None value
+                | o -> let `String offset = to_string o in arr#offsetSet (Some offset) value
+            end; value
+    end
+and eval_assignable v a = match a with
+    | Variable s -> Hashtbl.find v s
+    | ArrayOffset (a, o) -> begin
+        match eval_assignable v a with
+            | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
             | _ -> raise BadType
     end
-    | ArrayOffsetSet (varName, offsetsExpr, lastOffsetExpr, valueExpr) ->
-        let value = eval v valueExpr in
-        let foldOffsets = fun a b -> match a with
-            | `Array a ->
-                let `String offset = to_string (eval v b) in
-                a#offsetGet offset
-            | _ -> raise BadType
-        in
-        match List.fold_left foldOffsets (Hashtbl.find v varName) offsetsExpr with
-            | `Array a -> begin match eval v lastOffsetExpr with
-                | `Null -> a#offsetSet None value
-                | o -> let `String offset = to_string o in a#offsetSet (Some offset) value
-            end; value
-            | _ -> raise BadType
-        
         
 and exec v s = match s with
     | IgnoreResult e -> let _ = eval v e in NoOp
