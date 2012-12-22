@@ -82,7 +82,8 @@ array_content_list:
 
 assignable:
     | T_VARIABLE { Ast.Variable $1 }
-    | assignable TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, $3) }
+    | assignable TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, Some $3) }
+    | assignable TT_LEFT_BRACKET TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, None) }
 
 expr:
       T_DNUMBER { Ast.ConstValue (`Double $1) }

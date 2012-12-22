@@ -1,6 +1,8 @@
 open Language.Typing
 open Language.Ast
 
+exception MissingArrayOffset
+
 type exec_return =
     | NoOp
     | Return of value
@@ -59,17 +61,19 @@ let rec eval v e = match e with
         | ArrayOffset (a, o) ->
             let arr = match eval_assignable v a with `Array arr -> arr | _ -> raise BadType in
             let value = eval v f in
-            begin match eval v o with
-                | `Null -> arr#offsetSet None value
-                | o -> let `String offset = to_string o in arr#offsetSet (Some offset) value
+            begin match o with
+                | None -> arr#offsetSet None value
+                | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
             end; value
     end
 and eval_assignable v a = match a with
     | Variable s -> Hashtbl.find v s
     | ArrayOffset (a, o) -> begin
-        match eval_assignable v a with
-            | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
-            | _ -> raise BadType
+        match o with
+            | None -> raise MissingArrayOffset
+            | Some o -> match eval_assignable v a with
+                | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
+                | _ -> raise BadType
     end
         
 and exec v s = match s with
@@ -84,7 +88,6 @@ and exec v s = match s with
             | `Long i -> print_int i
             | `Array _ -> print_string "Array(...)"
         end;
-        print_newline ();
         NoOp
 
 and exec_list v sl = match sl with

@@ -19,7 +19,7 @@ type expr =
     | ArrayConstructor of (expr * expr) list
 and assignable =
     | Variable of string
-    | ArrayOffset of assignable * expr
+    | ArrayOffset of assignable * expr option
 
 type stmt =
     | Echo of expr
