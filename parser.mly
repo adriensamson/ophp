@@ -110,6 +110,15 @@ expr:
     | expr T_SL expr { Ast.BinaryOperation(Ast.ShiftLeft, $1, $3) }
     | expr T_SR expr { Ast.BinaryOperation(Ast.ShiftRight, $1, $3) }
     | TT_EXCL expr { Ast.Not ($2) }
+    | expr T_IS_GREATER_OR_EQUAL expr { Ast.Comparison (Ast.GreaterEqual, $1, $3) }
+    | expr TT_GREATER expr { Ast.Comparison (Ast.Greater, $1, $3) }
+    | expr TT_SMALLER expr { Ast.Comparison (Ast.Lesser, $1, $3) }
+    | expr T_IS_SMALLER_OR_EQUAL expr { Ast.Comparison (Ast.LesserEqual, $1, $3) }
+    | expr T_IS_EQUAL expr { Ast.Comparison (Ast.Equal, $1, $3) }
+    | expr T_IS_IDENTICAL expr { Ast.Comparison (Ast.Identical, $1, $3) }
+    | expr T_IS_NOT_EQUAL expr { Ast.Comparison (Ast.NotEqual, $1, $3) }
+    | expr T_IS_NOT_IDENTICAL expr { Ast.Comparison (Ast.NotIdentical, $1, $3) }
+    
     | assignable TT_EQUAL expr { Ast.Assign ($1, $3) }
     | assignable T_PLUS_EQUAL expr { Ast.BinaryAssign (Ast.Plus, $1, $3) }
     | assignable T_MINUS_EQUAL expr { Ast.BinaryAssign (Ast.Minus, $1, $3) }

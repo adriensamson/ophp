@@ -25,6 +25,8 @@ let bitwise_operator op val1 val2 =
     and `Long i2 = to_long val2 in
     `Long (op i1 i2)
 
+let compare op val1 val2 = failwith "Not implemented"
+
 let rec eval v e = match e with
     | ConstValue f -> f
     | Assignable a -> eval_assignable v a
@@ -45,6 +47,7 @@ let rec eval v e = match e with
     | Or (f, g) -> boolean_operator (||) (eval v f) (eval v g)
     | Xor (f, g) -> boolean_operator (!=) (eval v f) (eval v g)
     | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
+    | Comparison (op, f, g) -> compare op (eval v f) (eval v g)
     | FunctionCall (name, argValues) -> begin
         let (argNames, code) = Hashtbl.find functions name in
             let local_vars = Hashtbl.create 10 in

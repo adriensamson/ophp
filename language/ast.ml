@@ -11,11 +11,22 @@ type binaryOperator =
     | ShiftLeft
     | ShiftRight
 
+type comparisonOperator =
+    | GreaterEqual
+    | Greater
+    | Lesser
+    | LesserEqual
+    | Equal
+    | Identical
+    | NotEqual
+    | NotIdentical
+
 type expr =
     | ConstValue of Typing.value
     | Assignable of assignable
     | FunctionCall of string * expr list
     | BinaryOperation of binaryOperator * expr * expr
+    | Comparison of comparisonOperator * expr * expr
     | And of expr * expr
     | Or of expr * expr
     | Xor of expr * expr
