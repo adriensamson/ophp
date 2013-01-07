@@ -93,23 +93,35 @@ expr:
     | T_TRUE { Ast.ConstValue (`Bool true) }
     | TT_CONSTANT_STRING { Ast.ConstValue (`String $1) }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
-    | expr TT_PLUS expr { Ast.Plus ($1, $3) }
-    | expr TT_MINUS expr { Ast.Minus ($1, $3) }
-    | expr TT_MUL expr { Ast.Mult ($1, $3) }
-    | expr TT_DIV expr { Ast.Div ($1, $3) }
-    | expr TT_MOD expr { Ast.Mod ($1, $3) }
-    | expr TT_CONCAT expr { Ast.Concat ($1, $3) }
+    | expr TT_PLUS expr { Ast.BinaryOperation(Ast.Plus, $1, $3) }
+    | expr TT_MINUS expr { Ast.BinaryOperation(Ast.Minus, $1, $3) }
+    | expr TT_MUL expr { Ast.BinaryOperation(Ast.Mult, $1, $3) }
+    | expr TT_DIV expr { Ast.BinaryOperation(Ast.Div, $1, $3) }
+    | expr TT_MOD expr { Ast.BinaryOperation(Ast.Modulo, $1, $3) }
+    | expr TT_CONCAT expr { Ast.BinaryOperation(Ast.Concat, $1, $3) }
     | expr T_BOOLEAN_AND expr { Ast.And ($1, $3) }
     | expr T_LOGICAL_AND expr { Ast.And ($1, $3) }
     | expr T_BOOLEAN_OR expr { Ast.Or ($1, $3) }
     | expr T_LOGICAL_OR expr { Ast.Or ($1, $3) }
     | expr T_LOGICAL_XOR expr { Ast.Xor ($1, $3) }
-    | expr TT_BITWISE_AND expr { Ast.BitwiseAnd ($1, $3) }
-    | expr TT_BITWISE_OR expr { Ast.BitwiseOr ($1, $3) }
-    | expr TT_BITWISE_XOR expr { Ast.BitwiseXor ($1, $3) }
+    | expr TT_BITWISE_AND expr { Ast.BinaryOperation(Ast.BitwiseAnd, $1, $3) }
+    | expr TT_BITWISE_OR expr { Ast.BinaryOperation(Ast.BitwiseOr, $1, $3) }
+    | expr TT_BITWISE_XOR expr { Ast.BinaryOperation(Ast.BitwiseXor, $1, $3) }
+    | expr T_SL expr { Ast.BinaryOperation(Ast.ShiftLeft, $1, $3) }
+    | expr T_SR expr { Ast.BinaryOperation(Ast.ShiftRight, $1, $3) }
     | TT_EXCL expr { Ast.Not ($2) }
     | assignable TT_EQUAL expr { Ast.Assign ($1, $3) }
-    | assignable T_PLUS_EQUAL expr { Ast.Assign ($1, Ast.Plus (Ast.Assignable $1, $3)) }
+    | assignable T_PLUS_EQUAL expr { Ast.BinaryAssign (Ast.Plus, $1, $3) }
+    | assignable T_MINUS_EQUAL expr { Ast.BinaryAssign (Ast.Minus, $1, $3) }
+    | assignable T_MUL_EQUAL expr { Ast.BinaryAssign (Ast.Mult, $1, $3) }
+    | assignable T_DIV_EQUAL expr { Ast.BinaryAssign (Ast.Div, $1, $3) }
+    | assignable T_MOD_EQUAL expr { Ast.BinaryAssign (Ast.Modulo, $1, $3) }
+    | assignable T_CONCAT_EQUAL expr { Ast.BinaryAssign (Ast.Concat, $1, $3) }
+    | assignable T_AND_EQUAL expr { Ast.BinaryAssign (Ast.BitwiseAnd, $1, $3) }
+    | assignable T_OR_EQUAL expr { Ast.BinaryAssign (Ast.BitwiseOr, $1, $3) }
+    | assignable T_XOR_EQUAL expr { Ast.BinaryAssign (Ast.BitwiseXor, $1, $3) }
+    | assignable T_SL_EQUAL expr { Ast.BinaryAssign (Ast.ShiftLeft, $1, $3) }
+    | assignable T_SR_EQUAL expr { Ast.BinaryAssign (Ast.ShiftRight, $1, $3) }
     | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
     | assignable { Ast.Assignable $1 }

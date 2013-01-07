@@ -28,19 +28,23 @@ let bitwise_operator op val1 val2 =
 let rec eval v e = match e with
     | ConstValue f -> f
     | Assignable a -> eval_assignable v a
-    | Plus (f, g) -> eval_binary (+) (+.) (eval v f) (eval v g)
-    | Minus (f, g) -> eval_binary (-) (-.) (eval v f) (eval v g)
-    | Mult (f, g) -> eval_binary ( * ) ( *. ) (eval v f) (eval v g)
-    | Div (f, g) -> eval_binary (/) (/.) (eval v f) (eval v g)
-    | Mod (f, g) -> eval_binary (mod) (mod_float) (eval v f) (eval v g)
-    | Concat (f, g) -> let `String s1 = to_string (eval v f) and `String s2 = to_string (eval v g) in `String (s1 ^ s2)
+    | BinaryOperation (op, f, g) -> begin match op with
+        | Plus -> eval_binary (+) (+.) (eval v f) (eval v g)
+        | Minus -> eval_binary (-) (-.) (eval v f) (eval v g)
+        | Mult -> eval_binary ( * ) ( *. ) (eval v f) (eval v g)
+        | Div -> eval_binary (/) (/.) (eval v f) (eval v g)
+        | Modulo -> eval_binary (mod) (mod_float) (eval v f) (eval v g)
+        | Concat -> let `String s1 = to_string (eval v f) and `String s2 = to_string (eval v g) in `String (s1 ^ s2)
+        | BitwiseAnd -> bitwise_operator (land) (eval v f) (eval v g)
+        | BitwiseOr -> bitwise_operator (lor) (eval v f) (eval v g)
+        | BitwiseXor -> bitwise_operator (lxor) (eval v f) (eval v g)
+        | ShiftLeft -> bitwise_operator (lsl) (eval v f) (eval v g)
+        | ShiftRight -> bitwise_operator (lsr) (eval v f) (eval v g)
+    end
     | And (f, g) -> boolean_operator (&&) (eval v f) (eval v g)
     | Or (f, g) -> boolean_operator (||) (eval v f) (eval v g)
     | Xor (f, g) -> boolean_operator (!=) (eval v f) (eval v g)
     | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
-    | BitwiseAnd (f, g) -> bitwise_operator (land) (eval v f) (eval v g)
-    | BitwiseOr (f, g) -> bitwise_operator (lor) (eval v f) (eval v g)
-    | BitwiseXor (f, g) -> bitwise_operator (lxor) (eval v f) (eval v g)
     | FunctionCall (name, argValues) -> begin
         let (argNames, code) = Hashtbl.find functions name in
             let local_vars = Hashtbl.create 10 in
@@ -66,6 +70,7 @@ let rec eval v e = match e with
                 | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
             end; value
     end
+    | BinaryAssign (op, a, f) -> eval v (Assign (a, BinaryOperation (op, Assignable a, f)))
 and eval_assignable v a = match a with
     | Variable s -> Hashtbl.find v s
     | ArrayOffset (a, o) -> begin
