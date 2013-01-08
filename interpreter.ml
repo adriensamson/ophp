@@ -25,7 +25,31 @@ let bitwise_operator op val1 val2 =
     and `Long i2 = to_long val2 in
     `Long (op i1 i2)
 
-let compare op val1 val2 = failwith "Not implemented"
+let compare_values val1 val2 = match val1, val2 with
+    | (`Array _, `Array _) -> None (* FIXME needs countable, traversable (and maybe sortable)*)
+    | (`Array _, _) -> Some 1
+    | (_, `Array _) -> Some (-1)
+    | _ when is_numeric false val1 && is_numeric false val2 -> begin match to_numeric val1, to_numeric val2 with
+        | (`Long i1, `Long i2) -> Some (compare i1 i2)
+        | (`Double f1, `Double f2) -> Some (compare f1 f2)
+        | (`Long i1, `Double f2) -> Some (compare (float_of_int i1) f2)
+        | (`Double f1, `Long i2) -> Some (compare f1 (float_of_int i2))
+    end
+    | _ -> let `String s1 = to_string val1 and `String s2 = to_string val2 in Some (compare s1 s2)
+
+let rec compare_all op val1 val2 = match op with
+    | NotEqual -> not (compare_all Equal val1 val2)
+    | NotIdentical -> not (compare_all Identical val1 val2)
+    | Identical -> val1 = val2 (* FIXME: array needs traversable *)
+    | _ -> match compare_values val1 val2 with
+        | None -> false
+        | Some cc -> match op with
+            | Equal -> cc = 0
+            | LesserEqual -> cc <= 0
+            | Lesser -> cc < 0
+            | GreaterEqual -> cc >= 0
+            | Greater -> cc > 0
+            | NotEqual | NotIdentical | Identical -> assert false
 
 let rec eval v e = match e with
     | ConstValue f -> f
@@ -47,7 +71,7 @@ let rec eval v e = match e with
     | Or (f, g) -> boolean_operator (||) (eval v f) (eval v g)
     | Xor (f, g) -> boolean_operator (!=) (eval v f) (eval v g)
     | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
-    | Comparison (op, f, g) -> compare op (eval v f) (eval v g)
+    | Comparison (op, f, g) -> `Bool (compare_all op (eval v f) (eval v g))
     | FunctionCall (name, argValues) -> begin
         let (argNames, code) = Hashtbl.find functions name in
             let local_vars = Hashtbl.create 10 in

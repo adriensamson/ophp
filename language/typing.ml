@@ -28,6 +28,12 @@ type value = [
     | `Array of (string, value) phpArray
 ]
 
+let is_numeric strict (v:value) = match v with
+    | `Null | `Bool _ -> not strict
+    | `Double _ | `Long _ -> true
+    | `Array _ (*| `Object _*) -> false
+    | `String s -> let r = Str.regexp "^[-+]?\\([0-9]+|[0-9]+\\.[0-9]*|\\.[0-9]+\\)$" in Str.string_match r s 0
+
 let to_numeric (v:value) = match v with
     | `Null -> `Long 0
     | `Bool true -> `Long 1
@@ -35,8 +41,8 @@ let to_numeric (v:value) = match v with
     | `Double d -> `Double d
     | `Long l -> `Long l
     | `String s ->
-        let rInt = Str.regexp "[0-9]+"
-        and rFloat = Str.regexp "[0-9]+\\.[0-9]*|\\.[0-9]+" in
+        let rInt = Str.regexp "[-+]?[0-9]+"
+        and rFloat = Str.regexp "[-+]?[0-9]+\\.[0-9]*|[-+]?\\.[0-9]+" in
         if Str.string_match rFloat s 0 then
             `Double (float_of_string (Str.matched_string s))
         else if Str.string_match rInt s 0 then
