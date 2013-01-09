@@ -32,7 +32,11 @@ type expr =
     | Xor of expr * expr
     | Not of expr
     | Assign of assignable * expr
-    | BinaryAssign of binaryOperator * assignable* expr
+    | BinaryAssign of binaryOperator * assignable * expr
+    | PreInc of assignable
+    | PostInc of assignable
+    | PreDec of assignable
+    | PostDec of assignable
     | ArrayConstructor of (expr * expr) list
 and assignable =
     | Variable of string

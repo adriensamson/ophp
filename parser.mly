@@ -131,6 +131,12 @@ expr:
     | assignable T_XOR_EQUAL expr { Ast.BinaryAssign (Ast.BitwiseXor, $1, $3) }
     | assignable T_SL_EQUAL expr { Ast.BinaryAssign (Ast.ShiftLeft, $1, $3) }
     | assignable T_SR_EQUAL expr { Ast.BinaryAssign (Ast.ShiftRight, $1, $3) }
+    
+    | T_INC assignable { Ast.PreInc $2 }
+    | assignable T_INC { Ast.PostInc $1 }
+    | T_DEC assignable { Ast.PreDec $2 }
+    | assignable T_DEC { Ast.PostDec $1 }
+    
     | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
     | assignable { Ast.Assignable $1 }
