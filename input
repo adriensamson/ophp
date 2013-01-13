@@ -34,4 +34,10 @@ while ($a < 3) {
     echo $a;
 }
 
+if (false)
+    echo 'aa';
+elseif (true)
+    if (true)
+        echo 'ii';
+
 ?> lll

@@ -62,13 +62,19 @@ control_stmt_list:
     | control_stmt { [$1] }
     | TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { $2 }
 
-/*full_control_stmt_list:
+any_control_stmt_list:
     | control_stmt_list { $1 }
-    | incomplete_if_stmt { [$1] }*/
+    | incomplete_if_stmt { [$1] }
+
+elseif:
+    | T_ELSEIF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list { ($3, $5) }
 
 elseifs:
       { [] }
-    | T_ELSEIF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs { ($3, $5)::$6 }
+    | elseifs elseif { $1 @ [$2] }
+
+incomplete_elseif:
+    | T_ELSEIF TT_LEFT_PAR expr TT_RIGHT_PAR incomplete_if_stmt { ($3, [$5]) }
 
 control_stmt:
       T_ECHO expr TT_SEMI_COLON		{ Ast.Echo ($2) }
@@ -84,8 +90,10 @@ stmt:
     | incomplete_if_stmt { $1 }
     
 incomplete_if_stmt:
-    /*| T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE control_stmt_list { make_if_else $3 $5 $6 $8 }*/
-    | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs { make_if $3 $5 $6 }
+    | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE incomplete_if_stmt { make_if_else $3 $5 $6 [$8] }
+    | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs elseif { make_if $3 $5 ($6 @ [$7]) }
+    | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs incomplete_elseif { make_if $3 $5 ($6 @ [$7]) }
+    | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR any_control_stmt_list { make_if $3 $5 [] }
 
 argument_definition_list:
       { [] }
