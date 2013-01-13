@@ -91,6 +91,8 @@ and token = parse
     | "else" { T_ELSE }
     | "elseif" { T_ELSEIF }
     | "while" { T_WHILE }
+    | "break" { T_BREAK }
+    | "continue" { T_CONTINUE }
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
     | '(' ' '* ("double"|"float") ' '* ')' { T_DOUBLE_CAST }

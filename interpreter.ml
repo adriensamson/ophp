@@ -6,6 +6,8 @@ exception MissingArrayOffset
 type exec_return =
     | NoOp
     | Return of value
+    | Break
+    | Continue
 
 let functions = Hashtbl.create 10
 
@@ -85,8 +87,8 @@ let rec eval v e = match e with
             let local_vars = Hashtbl.create 10 in
             List.iter2 (fun name value -> Hashtbl.add local_vars name (eval v value)) argNames argValues;
             match exec_list local_vars code with
-                | NoOp -> `Null
                 | Return v -> v
+                | _ -> `Null
     end
     | ArrayConstructor l -> let phpArray = new phpArray in
         let addElement (e1, e2) = match eval v e1 with
@@ -123,11 +125,22 @@ and eval_assignable v a = match a with
 and exec v s = match s with
     | IgnoreResult e -> let _ = eval v e in NoOp
     | Language.Ast.Return e -> Return (eval v e)
+    | Language.Ast.Break -> Break
+    | Language.Ast.Continue -> Continue
     | FunctionDef (name, argList, code) -> Hashtbl.add functions name (argList, code); NoOp
     | Echo e -> echo (eval v e); NoOp
     | If (e, sl) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl else NoOp
     | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl1 else exec_list v sl2
-    | While (e, sl) -> while let `Bool cond = to_bool (eval v e) in cond do let _ = exec_list v sl in () done; NoOp
+    | While (e, sl) -> begin
+        let result = ref NoOp in
+        while !result <> Break && let `Bool cond = to_bool (eval v e) in cond do
+            result := exec_list v sl
+        done;
+        if !result = Break || !result = Continue then
+            NoOp
+        else
+            !result
+    end
 
 and exec_list v sl = match sl with
     | [] -> NoOp

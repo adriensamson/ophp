@@ -31,6 +31,9 @@ if (true) {
 $a = 0;
 while ($a < 3) {
     $a++;
+    if ($a < 3) {
+        continue;
+    }
     echo $a;
 }
 
