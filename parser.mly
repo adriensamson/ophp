@@ -20,7 +20,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token T_ECHO T_FUNCTION T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
-%token T_IF T_ELSE T_ELSEIF T_WHILE T_BREAK T_CONTINUE
+%token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_BREAK T_CONTINUE
 
 %token END
 
@@ -84,6 +84,7 @@ control_stmt:
     | T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, $4, $7) }
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE control_stmt_list { make_if_else $3 $5 $6 $8 }
     | T_WHILE TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list { Ast.While ($3, $5) }
+    | T_FOR TT_LEFT_PAR argument_call_list TT_SEMI_COLON argument_call_list TT_SEMI_COLON argument_call_list TT_RIGHT_PAR control_stmt_list { Ast.For ($3, $5, $7, $9) }
     | T_BREAK TT_SEMI_COLON { Ast.Break 1 }
     | T_BREAK T_LNUMBER TT_SEMI_COLON { Ast.Break $2 }
     | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }

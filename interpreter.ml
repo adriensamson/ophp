@@ -144,6 +144,28 @@ and exec v s = match s with
             | Continue i -> Continue (i-1)
             | _ -> !result
     end
+    | For (e_init, e_end, e_loop, sl) -> begin
+        let result = ref NoOp in
+        let is_break op = match op with Break _ -> true | _ -> false in
+        let rec eval_all es = match es with
+            | [] -> `Bool true
+            | [e] -> to_bool (eval v e)
+            | e::l -> let _ = eval v e in eval_all l
+        in
+        let _ = eval_all e_init in
+        while not (is_break !result) && let `Bool cond = eval_all e_end in cond do
+            result := exec_list v sl;
+            if not (is_break !result) then
+                let _ = eval_all e_loop in ()
+            else ()
+        done;
+        match !result with
+            | Break i when i <= 1 -> NoOp
+            | Continue i when i <= 1 -> NoOp
+            | Break i -> Break (i-1)
+            | Continue i -> Continue (i-1)
+            | _ -> !result
+    end
 
 and exec_list v sl = match sl with
     | [] -> NoOp

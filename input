@@ -43,4 +43,8 @@ elseif (true)
     if (true)
         echo 'ii';
 
+for ($i = 0; $i < 10; ++$i) {
+    echo $i;
+}
+
 ?> lll
