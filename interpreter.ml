@@ -6,8 +6,8 @@ exception MissingArrayOffset
 type exec_return =
     | NoOp
     | Return of value
-    | Break
-    | Continue
+    | Break of int
+    | Continue of int
 
 let functions = Hashtbl.create 10
 
@@ -125,21 +125,24 @@ and eval_assignable v a = match a with
 and exec v s = match s with
     | IgnoreResult e -> let _ = eval v e in NoOp
     | Language.Ast.Return e -> Return (eval v e)
-    | Language.Ast.Break -> Break
-    | Language.Ast.Continue -> Continue
+    | Language.Ast.Break i -> Break i
+    | Language.Ast.Continue i -> Continue i
     | FunctionDef (name, argList, code) -> Hashtbl.add functions name (argList, code); NoOp
     | Echo e -> echo (eval v e); NoOp
     | If (e, sl) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl else NoOp
     | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl1 else exec_list v sl2
     | While (e, sl) -> begin
         let result = ref NoOp in
-        while !result <> Break && let `Bool cond = to_bool (eval v e) in cond do
+        let is_break op = match op with Break _ -> true | _ -> false in
+        while not (is_break !result) && let `Bool cond = to_bool (eval v e) in cond do
             result := exec_list v sl
         done;
-        if !result = Break || !result = Continue then
-            NoOp
-        else
-            !result
+        match !result with
+            | Break i when i <= 1 -> NoOp
+            | Continue i when i <= 1 -> NoOp
+            | Break i -> Break (i-1)
+            | Continue i -> Continue (i-1)
+            | _ -> !result
     end
 
 and exec_list v sl = match sl with

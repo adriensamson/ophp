@@ -50,6 +50,6 @@ type stmt =
     | If of expr * stmt list
     | IfElse of expr * stmt list * stmt list
     | While of expr * stmt list
-    | Break
-    | Continue
+    | Break of int
+    | Continue of int
 

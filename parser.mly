@@ -84,8 +84,10 @@ control_stmt:
     | T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, $4, $7) }
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE control_stmt_list { make_if_else $3 $5 $6 $8 }
     | T_WHILE TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list { Ast.While ($3, $5) }
-    | T_BREAK TT_SEMI_COLON { Ast.Break }
-    | T_CONTINUE TT_SEMI_COLON { Ast.Continue }
+    | T_BREAK TT_SEMI_COLON { Ast.Break 1 }
+    | T_BREAK T_LNUMBER TT_SEMI_COLON { Ast.Break $2 }
+    | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }
+    | T_CONTINUE T_LNUMBER TT_SEMI_COLON { Ast.Continue $2 }
 
 stmt:
     | control_stmt { $1 }
