@@ -87,6 +87,10 @@ and token = parse
     | "new" { T_NEW }
     | "instanceof" { T_INSTANCEOF }
     | "array" { T_ARRAY }
+    | "if" { T_IF }
+    | "else" { T_ELSE }
+    | "elseif" { T_ELSEIF }
+    | "while" { T_WHILE }
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
     | '(' ' '* ("double"|"float") ' '* ')' { T_DOUBLE_CAST }

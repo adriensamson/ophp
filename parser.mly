@@ -1,5 +1,13 @@
 %{
 open Language
+
+let rec make_if_else cond then_list elseifs else_list = match elseifs with
+    | [] -> Ast.IfElse (cond, then_list, else_list)
+    | (c, tl)::t -> Ast.IfElse (cond, then_list, [make_if_else c tl t else_list])
+
+let rec make_if cond then_list elseifs = match elseifs with
+    | [] -> Ast.If (cond, then_list)
+    | (c, tl)::t -> Ast.IfElse (cond, then_list, [make_if c tl t])
 %}
 
 %token <float> T_DNUMBER
@@ -12,6 +20,7 @@ open Language
 
 %token T_ECHO T_FUNCTION T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
+%token T_IF T_ELSE T_ELSEIF T_WHILE
 
 %token END
 
@@ -47,14 +56,36 @@ everything:
 stmt_list:
       { [] }
     | stmt stmt_list { $1::$2 }
+    
+control_stmt_list:
+    | TT_SEMI_COLON { [] }
+    | control_stmt { [$1] }
+    | TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { $2 }
 
-stmt:
+/*full_control_stmt_list:
+    | control_stmt_list { $1 }
+    | incomplete_if_stmt { [$1] }*/
+
+elseifs:
+      { [] }
+    | T_ELSEIF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs { ($3, $5)::$6 }
+
+control_stmt:
       T_ECHO expr TT_SEMI_COLON		{ Ast.Echo ($2) }
     | T_INLINE_HTML  { Ast.Echo (Ast.ConstValue (`String $1)) }
     | expr TT_SEMI_COLON		{ Ast.IgnoreResult ($1) }
     | T_RETURN expr TT_SEMI_COLON       { Ast.Return ($2) }
     | T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, $4, $7) }
+    | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE control_stmt_list { make_if_else $3 $5 $6 $8 }
+    | T_WHILE TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list { Ast.While ($3, $5) }
 
+stmt:
+    | control_stmt { $1 }
+    | incomplete_if_stmt { $1 }
+    
+incomplete_if_stmt:
+    /*| T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE control_stmt_list { make_if_else $3 $5 $6 $8 }*/
+    | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs { make_if $3 $5 $6 }
 
 argument_definition_list:
       { [] }

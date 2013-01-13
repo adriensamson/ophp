@@ -24,4 +24,14 @@ echo $array[$e];
 $array[] = 7;
 echo $array[78];
 
+if (true) {
+    echo 'yes';
+}
+
+$a = 0;
+while ($a < 3) {
+    $a++;
+    echo $a;
+}
+
 ?> lll

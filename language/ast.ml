@@ -47,3 +47,7 @@ type stmt =
     | Return of expr
     | IgnoreResult of expr
     | FunctionDef of string * string list * stmt list
+    | If of expr * stmt list
+    | IfElse of expr * stmt list * stmt list
+    | While of expr * stmt list
+

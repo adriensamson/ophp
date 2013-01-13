@@ -51,6 +51,14 @@ let rec compare_all op val1 val2 = match op with
             | Greater -> cc > 0
             | NotEqual | NotIdentical | Identical -> assert false
 
+let echo v = match v with
+    | `Null -> ()
+    | `String s -> print_string s
+    | `Bool b -> print_string (string_of_bool b)
+    | `Double f -> print_float f
+    | `Long i -> print_int i
+    | `Array _ -> print_string "Array(...)"
+
 let rec eval v e = match e with
     | ConstValue f -> f
     | Assignable a -> eval_assignable v a
@@ -116,15 +124,10 @@ and exec v s = match s with
     | IgnoreResult e -> let _ = eval v e in NoOp
     | Language.Ast.Return e -> Return (eval v e)
     | FunctionDef (name, argList, code) -> Hashtbl.add functions name (argList, code); NoOp
-    | Echo e -> begin match (eval v e) with
-            | `Null -> ()
-            | `String s -> print_string s
-            | `Bool b -> print_string (string_of_bool b)
-            | `Double f -> print_float f
-            | `Long i -> print_int i
-            | `Array _ -> print_string "Array(...)"
-        end;
-        NoOp
+    | Echo e -> echo (eval v e); NoOp
+    | If (e, sl) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl else NoOp
+    | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl1 else exec_list v sl2
+    | While (e, sl) -> while let `Bool cond = to_bool (eval v e) in cond do let _ = exec_list v sl in () done; NoOp
 
 and exec_list v sl = match sl with
     | [] -> NoOp
