@@ -2,12 +2,14 @@ open Language.Typing
 open Language.Ast
 
 exception MissingArrayOffset
+exception NotTraversable
 
 type exec_return =
     | NoOp
     | Return of value
     | Break of int
     | Continue of int
+let is_break op = match op with Break _ -> true | _ -> false
 
 let functions = Hashtbl.create 10
 
@@ -133,7 +135,6 @@ and exec v s = match s with
     | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl1 else exec_list v sl2
     | While (e, sl) -> begin
         let result = ref NoOp in
-        let is_break op = match op with Break _ -> true | _ -> false in
         while not (is_break !result) && let `Bool cond = to_bool (eval v e) in cond do
             result := exec_list v sl
         done;
@@ -146,7 +147,6 @@ and exec v s = match s with
     end
     | For (e_init, e_end, e_loop, sl) -> begin
         let result = ref NoOp in
-        let is_break op = match op with Break _ -> true | _ -> false in
         let rec eval_all es = match es with
             | [] -> `Bool true
             | [e] -> to_bool (eval v e)
@@ -165,6 +165,32 @@ and exec v s = match s with
             | Break i -> Break (i-1)
             | Continue i -> Continue (i-1)
             | _ -> !result
+    end
+    | Foreach (e, ko, vn, sl) -> begin match eval v e with
+        | `Array a -> begin
+            a#rewind ();
+            let result = ref NoOp in
+            while not (is_break !result) && a#valid() do
+                Hashtbl.replace v vn (a#current ());
+                begin match ko with
+                    | None -> ()
+                    | Some kn -> match a#key () with
+                        | None -> assert false
+                        | Some k -> Hashtbl.replace v kn (`String k)
+                end;
+                result := exec_list v sl;
+                if not (is_break !result) then
+                    a#next ()
+                else ()
+            done;
+            match !result with
+                | Break i when i <= 1 -> NoOp
+                | Continue i when i <= 1 -> NoOp
+                | Break i -> Break (i-1)
+                | Continue i -> Continue (i-1)
+                | _ -> !result
+        end
+        | _ -> raise NotTraversable
     end
 
 and exec_list v sl = match sl with

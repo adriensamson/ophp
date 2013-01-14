@@ -92,6 +92,8 @@ and token = parse
     | "elseif" { T_ELSEIF }
     | "while" { T_WHILE }
     | "for" { T_FOR }
+    | "foreach" { T_FOREACH }
+    | "as" { T_AS }
     | "break" { T_BREAK }
     | "continue" { T_CONTINUE }
     

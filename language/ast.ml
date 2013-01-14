@@ -51,6 +51,7 @@ type stmt =
     | IfElse of expr * stmt list * stmt list
     | While of expr * stmt list
     | For of expr list * expr list * expr list * stmt list
+    | Foreach of expr * string option * string * stmt list
     | Break of int
     | Continue of int
 
