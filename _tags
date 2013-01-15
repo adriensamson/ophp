@@ -1,2 +1,3 @@
 <language/*.cmx>: for-pack(Language)
+<interpreter/*.cmx>: for-pack(Interpreter)
 
