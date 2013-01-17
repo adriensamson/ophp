@@ -26,8 +26,8 @@ let rec exec v s = match s with
     | Language.Ast.Continue i -> Continue i
     | FunctionDef (name, argNames, code) ->
         let f argValues =
-            let localVars = Hashtbl.create 10 in
-            List.iter2 (fun name value -> Hashtbl.add localVars name value) argNames argValues;
+            let localVars = new Variable.variableRegistry in
+            List.iter2 (fun name value -> localVars#set name value) argNames argValues;
             match exec_list localVars code with
                 | Return v -> v
                 | _ -> `Null
@@ -73,12 +73,12 @@ let rec exec v s = match s with
             a#rewind ();
             let result = ref NoOp in
             while not (is_break !result) && a#valid() do
-                Hashtbl.replace v vn (a#current ());
+                v#set vn (a#current ());
                 begin match ko with
                     | None -> ()
                     | Some kn -> match a#key () with
                         | None -> assert false
-                        | Some k -> Hashtbl.replace v kn (`String k)
+                        | Some k -> v#set kn (`String k)
                 end;
                 result := exec_list v sl;
                 if not (is_break !result) then
