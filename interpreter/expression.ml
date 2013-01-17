@@ -45,7 +45,6 @@ let rec compare_all op val1 val2 = match op with
             | Greater -> cc > 0
             | NotEqual | NotIdentical | Identical -> assert false
 
-let eval exec_fun v e =
 let rec eval v e = match e with
     | ConstValue f -> f
     | Assignable a -> eval_assignable v a
@@ -67,12 +66,7 @@ let rec eval v e = match e with
     | Xor (f, g) -> boolean_operator (!=) (eval v f) (eval v g)
     | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
     | Comparison (op, f, g) -> `Bool (compare_all op (eval v f) (eval v g))
-    | FunctionCall (name, argValues) -> begin
-        let (argNames, code) = Hashtbl.find Function.functions name in
-            let local_vars = Hashtbl.create 10 in
-            List.iter2 (fun name value -> Hashtbl.add local_vars name (eval v value)) argNames argValues;
-            exec_fun local_vars code
-    end
+    | FunctionCall (name, argValues) -> Function.registry#exec name (List.map (eval v) argValues)
     | ArrayConstructor l -> let phpArray = new phpArray in
         let addElement (e1, e2) = match eval v e1 with
             | `Null -> phpArray#offsetSet None (eval v e2)
@@ -104,4 +98,4 @@ and eval_assignable v a = match a with
                 | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
                 | _ -> raise BadType
     end
-in eval v e
+

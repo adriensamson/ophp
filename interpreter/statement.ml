@@ -24,7 +24,14 @@ let rec exec v s = match s with
     | Language.Ast.Return e -> Return (eval v e)
     | Language.Ast.Break i -> Break i
     | Language.Ast.Continue i -> Continue i
-    | FunctionDef (name, argList, code) -> Hashtbl.add Function.functions name (argList, code); NoOp
+    | FunctionDef (name, argNames, code) ->
+        let f argValues =
+            let localVars = Hashtbl.create 10 in
+            List.iter2 (fun name value -> Hashtbl.add localVars name value) argNames argValues;
+            match exec_list localVars code with
+                | Return v -> v
+                | _ -> `Null
+        in Function.registry#add name f; NoOp
     | Echo e -> echo (eval v e); NoOp
     | If (e, sl) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl else NoOp
     | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl1 else exec_list v sl2
@@ -93,7 +100,4 @@ and exec_list v sl = match sl with
     | a::t -> match exec v a with
         | NoOp -> exec_list v t
         | r -> r
-and exec_fun v sl = match exec_list v sl with
-    | Return v -> v
-    | _ -> `Null
-and eval v e = Expression.eval exec_fun v e
+and eval v e = Expression.eval v e
