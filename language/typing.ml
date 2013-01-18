@@ -33,9 +33,11 @@ class ['a, 'b] phpArray =
             Hashtbl.remove hashTable off
         
         method current () = match currentIndex with
-            | None -> `Null
+            | None -> raise Not_found
             | Some k -> Hashtbl.find hashTable k
-        method key () = currentIndex
+        method key () = match currentIndex with
+            | None -> raise Not_found
+            | Some k -> k
         method next () = match currentIndex with
             | None -> ()
             | Some a -> let rec do_next l = match l with
@@ -51,6 +53,8 @@ class ['a, 'b] phpArray =
         method valid () = match currentIndex with 
             | None -> false
             | Some _ -> true
+        
+        method count () = List.length indexList
     end
 
 exception BadType

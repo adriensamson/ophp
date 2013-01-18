@@ -20,7 +20,22 @@ let bitwise_operator op val1 val2 =
     `Long (op i1 i2)
 
 let compare_values val1 val2 = match val1, val2 with
-    | (`Array _, `Array _) -> None (* FIXME needs countable, traversable (and maybe sortable)*)
+    | (`Array a1, `Array a2) ->
+        let compare_counts = compare (a1#count ()) (a2#count ()) in
+        if compare_counts = 0 then begin
+            a1#rewind ();
+            let result = ref (Some 0) in
+            while !result = Some 0 && a1#valid () do
+                let key = a1#key () in
+                if a2#offsetExists key then
+                    result := Some (compare (a1#current ()) (a2#offsetGet key))
+                else
+                    result := None;
+                a1#next ();
+            done;
+            !result
+        end else
+            Some compare_counts
     | (`Array _, _) -> Some 1
     | (_, `Array _) -> Some (-1)
     | _ when is_numeric false val1 && is_numeric false val2 -> begin match to_numeric val1, to_numeric val2 with
@@ -34,7 +49,23 @@ let compare_values val1 val2 = match val1, val2 with
 let rec compare_all op val1 val2 = match op with
     | NotEqual -> not (compare_all Equal val1 val2)
     | NotIdentical -> not (compare_all Identical val1 val2)
-    | Identical -> val1 = val2 (* FIXME: array needs traversable *)
+    | Identical -> begin match val1, val2 with
+        | (`Array a1, `Array a2) ->
+            a1#rewind ();
+            a2#rewind ();
+            let result = ref (a1#key () = a2#key () && compare_all Identical (a1#current ()) (a2#current ())) in
+            while !result do
+                a1#next ();
+                a2#next ();
+                result := (not (a1#valid ()) && not (a2#valid ()))
+                    || (a1#valid() && a2#valid()
+                        && a1#key () = a2#key ()
+                        && compare_all Identical (a1#current ()) (a2#current ())
+                        )
+            done;
+            !result
+        | _ -> val1 = val2
+        end
     | _ -> match compare_values val1 val2 with
         | None -> false
         | Some cc -> match op with

@@ -76,9 +76,7 @@ let rec exec v s = match s with
                 v#set vn (a#current ());
                 begin match ko with
                     | None -> ()
-                    | Some kn -> match a#key () with
-                        | None -> assert false
-                        | Some k -> v#set kn (`String k)
+                    | Some kn -> let k = a#key () in v#set kn (`String k)
                 end;
                 result := exec_list v sl;
                 if not (is_break !result) then
