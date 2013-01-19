@@ -52,7 +52,12 @@ let to_string (v:value) = match v with
     | `Null -> `String ""
     | `Bool false -> `String ""
     | `Bool true -> `String "1"
-    | `Double d -> `String (string_of_float d)
+    | `Double d ->
+        let i = int_of_float d in
+        if float_of_int i = d then
+            `String (string_of_int i)
+        else
+            `String (string_of_float d)
     | `Long l -> `String (string_of_int l)
     | `String s -> `String s
     | `Array _ -> raise BadType

@@ -11,14 +11,6 @@ type exec_return =
 
 let is_break op = match op with Break _ -> true | _ -> false
 
-let echo v = match v with
-    | `Null -> ()
-    | `String s -> print_string s
-    | `Bool b -> print_string (string_of_bool b)
-    | `Double f -> print_float f
-    | `Long i -> print_int i
-    | `Array _ -> print_string "Array(...)"
-
 let rec exec v s = match s with
     | IgnoreResult e -> let _ = eval v e in NoOp
     | Language.Ast.Return e -> Return (eval v e)
@@ -32,7 +24,10 @@ let rec exec v s = match s with
                 | Return v -> v
                 | _ -> `Null
         in Function.registry#add name f; NoOp
-    | Echo e -> echo (eval v e); NoOp
+    | Echo e ->
+        let `String s = to_string (eval v e) in
+        print_string s;
+        NoOp
     | If (e, sl) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl else NoOp
     | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool (eval v e) in if cond then exec_list v sl1 else exec_list v sl2
     | While (e, sl) -> begin
