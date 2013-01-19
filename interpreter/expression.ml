@@ -98,7 +98,7 @@ let rec eval v e = match e with
     | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
     | Comparison (op, f, g) -> `Bool (compare_all op (eval v f) (eval v g))
     | FunctionCall (name, argValues) -> Function.registry#exec name (List.map (eval v) argValues)
-    | ArrayConstructor l -> let phpArray = new phpArray in
+    | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
         let addElement (e1, e2) = match eval v e1 with
             | `Null -> phpArray#offsetSet None (eval v e2)
             | o -> let `String offset = to_string o in phpArray#offsetSet (Some offset) (eval v e2)

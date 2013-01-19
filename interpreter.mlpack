@@ -1,5 +1,6 @@
 interpreter/Function
 interpreter/Variable
+interpreter/PhpArray
 interpreter/Expression
 interpreter/Statement
 interpreter/Main
