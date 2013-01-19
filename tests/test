@@ -1,0 +1,37 @@
+#!/bin/bash
+
+BIN=$(dirname $0)/../src/main.byte
+PHP_BIN="php"
+
+function test_file {
+    local BASENAME=${1%.php}
+    if [ "$1" == "$BASENAME.php" ]
+    then
+        $PHP_BIN <$BASENAME.php >$BASENAME.expected
+        $BIN <$BASENAME.php >$BASENAME.result
+        diff -u $BASENAME.expected $BASENAME.result
+    fi
+}
+
+function test_files {
+    while [ $# -gt 0 ]
+    do
+        if [ -d "$1" ]
+        then
+            test_files $1/*
+        elif [ -f "$1" ]
+        then
+            test_file $1
+        fi
+        shift 1
+    done
+}
+
+if [ $# -eq 0 ]
+then
+    test_files *
+else
+    test_files "$@"
+fi
+
+
