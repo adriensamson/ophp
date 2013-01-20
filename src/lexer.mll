@@ -1,9 +1,49 @@
 {
     open Parser
     
-    type currentRule = Outer | Token
+    type currentRule = Outer | Token | InString
     
     let currentRule = ref Outer
+    
+    let hexDecode s =
+        let result = ref 0 in
+        let f c = match c with
+            | '0' -> 0
+            | '1' -> 1
+            | '2' -> 2
+            | '3' -> 3
+            | '4' -> 4
+            | '5' -> 5
+            | '6' -> 6
+            | '7' -> 7
+            | '8' -> 8
+            | '9' -> 9
+            | 'a' | 'A' -> 10
+            | 'b' | 'B' -> 11
+            | 'c' | 'C' -> 12
+            | 'd' | 'D' -> 13
+            | 'e' | 'E' -> 14
+            | 'f' | 'F' -> 15
+            | _ -> failwith "not hexa"
+        in
+        String.iter (fun c -> result := !result * 16 + f c) s;
+        !result
+
+    let octalDecode s =
+        let result = ref 0 in
+        let f c = match c with
+            | '0' -> 0
+            | '1' -> 1
+            | '2' -> 2
+            | '3' -> 3
+            | '4' -> 4
+            | '5' -> 5
+            | '6' -> 6
+            | '7' -> 7
+            | _ -> failwith "not octal"
+        in
+        String.iter (fun c -> result := !result * 8 + f c) s;
+        !result
 
     let unescapeSimpleQuotes s =
         let regexp = Str.regexp "\\\\." in
@@ -13,6 +53,25 @@
             | _ -> s
         in
         Str.global_substitute regexp f s
+    
+    let unescapeDoubleQuotes s =
+        let regexp = Str.regexp "\\\\\\([nrtvef$]\\|[0-7][0-7]?[0-7]?\\|x[0-9A-Fa-f][0-9A-Fa-f]?\\)" in
+        let f s = match Str.matched_string s with
+            | "\\\\" -> "\\"
+            | "\\\"" -> "\""
+            | "\\n" -> "\n"
+            | "\\r" -> "\r"
+            | "\\t" -> "\t"
+            | "\\v" -> "\x0B"
+            | "\\e" -> "\x1B"
+            | "\\f" -> "\x1C"
+            | "\\$" -> "$"
+            | ss -> match ss.[1] with
+                | 'x' -> String.make 1 (char_of_int (hexDecode (String.sub ss 2 (String.length ss - 2))))
+                | _ -> String.make 1 (char_of_int (octalDecode (String.sub ss 1 (String.length ss - 1))))
+        in
+        Str.global_substitute regexp f s
+            
 }
 let digit = ['0'-'9']
 let ident = ['a'-'z' 'A'-'Z' '_' '\x7f'-'\xff']['a'-'z' 'A'-'Z' '0'-'9' '_' '\x7f'-'\xff']*
@@ -26,6 +85,7 @@ and token = parse
     | [' ' '\t' '\n']	{ token lexbuf }
     
     | "?>" { currentRule := Outer; outer lexbuf }
+    | '"' { currentRule := InString; TT_DOUBLE_QUOTE }
     
     | ';' { TT_SEMI_COLON }
     | '+' { TT_PLUS }
@@ -122,10 +182,15 @@ and token = parse
     
     | _ { token lexbuf }
     | eof { END }
+    
+and inString = parse
+    | '"' { currentRule := Token; TT_DOUBLE_QUOTE }
+    | ([^'"' '$' '{']|"\\\""|"\\$"|'{'[^'$'])* as s { TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
 
 {
     let parse lexbuf = match !currentRule with
         | Outer -> outer lexbuf
         | Token -> token lexbuf
+        | InString -> inString lexbuf
 }
 
