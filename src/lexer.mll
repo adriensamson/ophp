@@ -5,9 +5,14 @@
     
     let currentRule = ref Outer
 
-    let unescape_simple_quotes s =
-        let regexp = Str.regexp "\\\\'" in
-        Str.global_replace regexp "'" s
+    let unescapeSimpleQuotes s =
+        let regexp = Str.regexp "\\\\." in
+        let f s = match Str.matched_string s with
+            | "\\\\" -> "\\"
+            | "\\'" -> "'"
+            | _ -> s
+        in
+        Str.global_substitute regexp f s
 }
 let digit = ['0'-'9']
 let ident = ['a'-'z' 'A'-'Z' '_' '\x7f'-'\xff']['a'-'z' 'A'-'Z' '0'-'9' '_' '\x7f'-'\xff']*
@@ -110,7 +115,7 @@ and token = parse
     | "." digit+
     | digit+ "." digit* as num { T_DNUMBER (float_of_string num) }
     
-    | "'" ([^'\'']|"\\'")* "'" as s { TT_CONSTANT_STRING (unescape_simple_quotes (String.sub s 1 (String.length s - 2))) }
+    | "'" (("\\\\")*"\\'")? ([^'\'']|[^'\\']("\\\\")*"\\'")* "'" as s { TT_CONSTANT_STRING (unescapeSimpleQuotes (String.sub s 1 (String.length s - 2))) }
     
     | ident as s { T_STRING s }
     | '$' ident as s { T_VARIABLE (String.sub s 1 (String.length s - 1)) }
@@ -123,3 +128,4 @@ and token = parse
         | Outer -> outer lexbuf
         | Token -> token lexbuf
 }
+
