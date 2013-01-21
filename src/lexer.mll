@@ -83,6 +83,8 @@ rule outer = parse
 
 and token = parse
     | [' ' '\t' '\n']	{ token lexbuf }
+    | ("//"|'#') [^ '\n' ]* '\n' { token lexbuf }
+    | "/*" ([^'*']|'*'[^'/'])* "*/" { token lexbuf }
     
     | "?>" { currentRule := Outer; outer lexbuf }
     | '"' { currentRule := InString; TT_DOUBLE_QUOTE }
