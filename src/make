@@ -2,6 +2,8 @@
 
 set -e
 
+cd $(dirname $0)
+
 TARGET=main
 FLAGS="-libs str"
 FLAGS="$FLAGS -yaccflag -v -lflag -g"
