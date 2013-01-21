@@ -177,7 +177,8 @@ and token = parse
     | "." digit+
     | digit+ "." digit* as num { T_DNUMBER (float_of_string num) }
     
-    | "'" (("\\\\")*"\\'")? ([^'\'']|[^'\\']("\\\\")*"\\'")* "'" as s { TT_CONSTANT_STRING (unescapeSimpleQuotes (String.sub s 1 (String.length s - 2))) }
+    | "'" (('\\' _) | [^ '\\' '\''])* "'"
+        as s { TT_CONSTANT_STRING (unescapeSimpleQuotes (String.sub s 1 (String.length s - 2))) }
     
     | ident as s { T_STRING s }
     | '$' ident as s { T_VARIABLE (String.sub s 1 (String.length s - 1)) }
@@ -187,7 +188,7 @@ and token = parse
     
 and inString = parse
     | '"' { currentRule := Token; TT_DOUBLE_QUOTE }
-    | ([^'"' '$' '{']|"\\\""|"\\$"|'{'[^'$'])* as s { TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
+    | ('\\' _ |[^'"' '$' '{']|'{'[^'$'])* as s { TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
 
 {
     let parse lexbuf = match !currentRule with
