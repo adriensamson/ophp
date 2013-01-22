@@ -23,6 +23,7 @@ type comparisonOperator =
 
 type expr =
     | ConstValue of Typing.value
+    | ConcatList of expr list
     | Assignable of assignable
     | FunctionCall of string * expr list
     | BinaryOperation of binaryOperator * expr * expr

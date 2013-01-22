@@ -1,9 +1,11 @@
 {
     open Parser
     
-    type currentRule = Outer | Token | InString
+    type currentRule = Outer | Token | InString | InStringVariableOffset
     
     let currentRule = ref Outer
+    
+    let tokenBuffer = ref []
     
     let hexDecode s =
         let result = ref 0 in
@@ -188,12 +190,45 @@ and token = parse
     
 and inString = parse
     | '"' { currentRule := Token; TT_DOUBLE_QUOTE }
-    | ('\\' _ |[^'"' '$' '{']|'{'[^'$'])* as s { TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
+    | ('\\' _ |[^ '\\' '"' '$' '{']|'{'[^'$'])* as s { TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
+    | '$' ident '['? as s
+    {
+        let varName = if s.[String.length s - 1] = '[' then begin
+            currentRule := InStringVariableOffset;
+            tokenBuffer := [TT_LEFT_BRACKET];
+            String.sub s 1 (String.length s - 2)
+        end else
+            String.sub s 1 (String.length s - 1)
+        in
+            T_VARIABLE (varName)
+    }
+
+and inStringVariableOffset = parse
+    | '-'? digit+ ']' as s
+    {
+        currentRule := InString;
+        let num = String.sub s 0 (String.length s - 1) in
+        tokenBuffer := TT_RIGHT_BRACKET::!tokenBuffer;
+        T_LNUMBER (int_of_string num)
+    }
+    | '$'? ident ']' as s
+    {
+        currentRule := InString;
+        let off = String.sub s 0 (String.length s - 1) in
+        tokenBuffer := TT_RIGHT_BRACKET::!tokenBuffer;
+        if off.[0] = '$' then
+            T_VARIABLE (String.sub off 1 (String.length off - 1))
+        else
+            TT_CONSTANT_STRING off
+    }
 
 {
-    let parse lexbuf = match !currentRule with
-        | Outer -> outer lexbuf
-        | Token -> token lexbuf
-        | InString -> inString lexbuf
+    let parse lexbuf = match !tokenBuffer with
+        | a::b -> tokenBuffer := b; a
+        | [] -> match !currentRule with
+            | Outer -> outer lexbuf
+            | Token -> token lexbuf
+            | InString -> inString lexbuf
+            | InStringVariableOffset -> inStringVariableOffset lexbuf
 }
 

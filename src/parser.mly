@@ -131,6 +131,11 @@ assignable:
     | assignable TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, Some $3) }
     | assignable TT_LEFT_BRACKET TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, None) }
 
+double_quoted_content_list:
+      { [] }
+    | TT_CONSTANT_STRING double_quoted_content_list { Ast.ConstValue (`String $1)::$2 }
+    | assignable double_quoted_content_list { (Ast.Assignable $1)::$2 }
+
 expr:
       T_DNUMBER { Ast.ConstValue (`Double $1) }
     | T_LNUMBER { Ast.ConstValue (`Long $1) }
@@ -138,7 +143,7 @@ expr:
     | T_FALSE { Ast.ConstValue (`Bool false) }
     | T_TRUE { Ast.ConstValue (`Bool true) }
     | TT_CONSTANT_STRING { Ast.ConstValue (`String $1) }
-    | TT_DOUBLE_QUOTE TT_CONSTANT_STRING TT_DOUBLE_QUOTE { Ast.ConstValue (`String $2) }
+    | TT_DOUBLE_QUOTE double_quoted_content_list TT_DOUBLE_QUOTE { Ast.ConcatList $2 }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
     | expr TT_PLUS expr { Ast.BinaryOperation(Ast.Plus, $1, $3) }
     | expr TT_MINUS expr { Ast.BinaryOperation(Ast.Minus, $1, $3) }

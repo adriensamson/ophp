@@ -78,6 +78,7 @@ let rec compare_all op val1 val2 = match op with
 
 let rec eval v e = match e with
     | ConstValue f -> f
+    | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (eval v e) in s) l))
     | Assignable a -> eval_assignable v a
     | BinaryOperation (op, f, g) -> begin match op with
         | Plus -> eval_binary (+) (+.) (eval v f) (eval v g)
