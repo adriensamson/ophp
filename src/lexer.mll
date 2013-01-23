@@ -7,6 +7,14 @@
     
     let tokenBuffer = ref []
     
+    let braceStack = object
+        val mutable stack = []
+        method push () = stack <- !currentRule::stack
+        method pop () = match stack with
+            | [] -> failwith "empty stack"
+            | r::t -> stack <- t; currentRule := r
+        end
+    
     let hexDecode s =
         let result = ref 0 in
         let f c = match c with
@@ -98,8 +106,8 @@ and token = parse
     | '/' { TT_DIV }
     | '(' { TT_LEFT_PAR }
     | ')' { TT_RIGHT_PAR }
-    | '{' { TT_LEFT_BRACE }
-    | '}' { TT_RIGHT_BRACE }
+    | '{' { braceStack#push (); TT_LEFT_BRACE }
+    | '}' { braceStack#pop (); TT_RIGHT_BRACE }
     | '[' { TT_LEFT_BRACKET }
     | ']' { TT_RIGHT_BRACKET }
     | ',' { TT_COMMA }
@@ -202,6 +210,7 @@ and inString = parse
         in
             T_VARIABLE (varName)
     }
+    | ("${"|"{$") ident as s { braceStack#push (); currentRule := Token; tokenBuffer := [T_VARIABLE (String.sub s 2 (String.length s - 2))]; T_CURLY_OPEN }
 
 and inStringVariableOffset = parse
     | '-'? digit+ ']' as s

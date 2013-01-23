@@ -25,4 +25,5 @@ echo "$aze[$zero]\n";
 echo "$aze[0][aa]\n";
 echo "$zero]\n";
 
+echo "${aze[$aze[0]]}\n";
 
