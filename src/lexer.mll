@@ -192,13 +192,15 @@ and token = parse
     
     | ident as s { T_STRING s }
     | '$' ident as s { T_VARIABLE (String.sub s 1 (String.length s - 1)) }
+    | "$$" ident as s { TT_VARIABLE_VARIABLE (String.sub s 2 (String.length s - 2)) }
+    | "${" { braceStack#push (); T_DOLLAR_OPEN_CURLY_BRACES }
     
     | _ { token lexbuf }
     | eof { END }
     
 and inString = parse
     | '"' { currentRule := Token; TT_DOUBLE_QUOTE }
-    | ('\\' _ |[^ '\\' '"' '$' '{']|'{'[^'$'])* as s { TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
+    | ('\\' _ |[^ '\\' '"' '$' '{']|'{'[^'$'])+ as s { TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
     | '$' ident '['? as s
     {
         let varName = if s.[String.length s - 1] = '[' then begin
@@ -211,6 +213,7 @@ and inString = parse
             T_VARIABLE (varName)
     }
     | ("${"|"{$") ident as s { braceStack#push (); currentRule := Token; tokenBuffer := [T_VARIABLE (String.sub s 2 (String.length s - 2))]; T_CURLY_OPEN }
+    | "{${" {braceStack#push (); currentRule := Token; braceStack#push (); tokenBuffer := [T_DOLLAR_OPEN_CURLY_BRACES]; T_CURLY_OPEN }
 
 and inStringVariableOffset = parse
     | '-'? digit+ ']' as s

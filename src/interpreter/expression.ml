@@ -108,6 +108,7 @@ let rec eval v e = match e with
         `Array phpArray
     | Assign (a, f) -> begin match a with
         | Variable s -> let g = eval v f in v#set s g; g
+        | VariableVariable e -> let `String s = to_string (eval v e) in let g = eval v f in v#set s g; g
         | ArrayOffset (a, o) ->
             let arr = match eval_assignable v a with `Array arr -> arr | _ -> raise BadType in
             let value = eval v f in
@@ -123,6 +124,7 @@ let rec eval v e = match e with
     | PostDec a -> let ret = eval v (Assignable a) in let _ = eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in ret
 and eval_assignable v a = match a with
     | Variable s -> v#get s
+    | VariableVariable e -> let `String s = to_string (eval v e) in v#get s
     | ArrayOffset (a, o) -> begin
         match o with
             | None -> raise MissingArrayOffset
