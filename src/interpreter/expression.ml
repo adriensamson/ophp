@@ -116,7 +116,7 @@ let rec eval v e = match e with
                 | None -> arr#offsetSet None value
                 | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
             end; value
-    | StaticProperty (className, propName) -> (Object.registry# get className)#getStaticProperty propName
+    | StaticProperty (className, propName) -> (Registry.classes# get className)#getStaticProperty propName
     end
     | BinaryAssign (op, a, f) -> eval v (Assign (a, BinaryOperation (op, Assignable a, f)))
     | PreInc a -> eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))

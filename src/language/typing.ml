@@ -29,14 +29,13 @@ class type ['a] phpClass =
         method parent : 'a phpClass option
         method implements : 'a phpClass list
         method constants : (string * 'a) list
-        method properties : (string * bool * visibility) list
-        method methods : (string * bool * visibility * ( 'a list -> 'a)) list
+        method getStaticProperty : string -> 'a
+        method setStaticProperty : string -> 'a -> unit
     end
 
 class type ['a] phpObject =
     object
         method objectClass : 'a phpClass
-        method objectProperties : (string * 'a phpClass * 'a) list
     end
 
 exception BadType
