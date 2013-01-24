@@ -14,6 +14,31 @@ class type ['a] phpArray =
         method count : unit -> int
     end
 
+type visibility =
+    | Public
+    | Protected
+    | Private
+
+class type ['a] phpClass =
+    object
+        method name : string
+        method abstract : bool
+        method static : bool
+        method final : bool
+        method interface : bool
+        method parent : 'a phpClass option
+        method implements : 'a phpClass list
+        method constants : (string * 'a) list
+        method properties : (string * bool * visibility) list
+        method methods : (string * bool * visibility * ( 'a list -> 'a)) list
+    end
+
+class type ['a] phpObject =
+    object
+        method objectClass : 'a phpClass
+        method objectProperties : (string * 'a phpClass * 'a) list
+    end
+
 exception BadType
 
 type value = [
@@ -23,12 +48,13 @@ type value = [
     | `Long of int
     | `String of string
     | `Array of value phpArray
+    | `Object of value phpObject
 ]
 
 let is_numeric strict (v:value) = match v with
     | `Null | `Bool _ -> not strict
     | `Double _ | `Long _ -> true
-    | `Array _ (*| `Object _*) -> false
+    | `Array _ | `Object _ -> false
     | `String s -> let r = Str.regexp "^[-+]?\\([0-9]+|[0-9]+\\.[0-9]*|\\.[0-9]+\\)$" in Str.string_match r s 0
 
 let to_numeric (v:value) = match v with
@@ -46,7 +72,7 @@ let to_numeric (v:value) = match v with
             `Long (int_of_string (Str.matched_string s))
         else
             `Long 0
-    | `Array _ -> raise BadType
+    | `Array _ | `Object _ -> raise BadType
 
 let to_string (v:value) = match v with
     | `Null -> `String ""
@@ -60,7 +86,7 @@ let to_string (v:value) = match v with
             `String (string_of_float d)
     | `Long l -> `String (string_of_int l)
     | `String s -> `String s
-    | `Array _ -> raise BadType
+    | `Array _ | `Object _ -> raise BadType
 
 let to_bool (v:value) = match v with
     | `Null -> `Bool false
@@ -68,7 +94,7 @@ let to_bool (v:value) = match v with
     | `Double d -> `Bool (d <> 0.)
     | `Long l -> `Bool (l <> 0)
     | `String s -> `Bool (not (s = "" || s = "0"))
-    | `Array _ -> raise BadType
+    | `Array _ | `Object _ -> raise BadType
 
 let to_long (v:value) = match v with
     | `Null -> `Long 0
@@ -80,5 +106,5 @@ let to_long (v:value) = match v with
         let r = Str.regexp "[0-9]+" in
         let matches = Str.string_match r s 0 in
         if matches then `Long (int_of_string (Str.matched_string s)) else `Long 0
-    | `Array _ -> raise BadType
+    | `Array _ | `Object _ -> raise BadType
 

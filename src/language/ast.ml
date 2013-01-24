@@ -26,6 +26,9 @@ type expr =
     | ConcatList of expr list
     | Assignable of assignable
     | FunctionCall of string * expr list
+    | MethodCall of expr * string * expr list
+    | StaticMethodCall of string * string * expr list
+    | ClassConstant of string * string
     | BinaryOperation of binaryOperator * expr * expr
     | Comparison of comparisonOperator * expr * expr
     | And of expr * expr
@@ -43,12 +46,15 @@ and assignable =
     | Variable of string
     | VariableVariable of expr
     | ArrayOffset of assignable * expr option
+    | Property of assignable * string
+    | StaticProperty of string * string
 
 type stmt =
     | Echo of expr
     | Return of expr
     | IgnoreResult of expr
     | FunctionDef of string * string list * stmt list
+    | ClassDef of string * string option * string list * classDefElement list (* name, parent, implements, content *)
     | If of expr * stmt list
     | IfElse of expr * stmt list * stmt list
     | While of expr * stmt list
@@ -56,4 +62,8 @@ type stmt =
     | Foreach of expr * string option * string * stmt list
     | Break of int
     | Continue of int
-
+and classDefElement =
+    | ConstantDef of string * expr
+    | PropertyDef of string * bool * Typing.visibility * expr option
+    | MethodDef of string * bool * Typing.visibility * string list * stmt list
+    | AbstractMethodDef of string * bool * Typing.visibility * string list
