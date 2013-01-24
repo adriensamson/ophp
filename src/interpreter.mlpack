@@ -1,4 +1,4 @@
-interpreter/Function
+interpreter/Registry
 interpreter/Variable
 interpreter/PhpArray
 interpreter/Expression

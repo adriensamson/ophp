@@ -8,5 +8,5 @@ class functionRegistry =
             f argValues
     end
 
-let registry = new functionRegistry
+let functions = new functionRegistry
 

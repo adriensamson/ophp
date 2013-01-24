@@ -23,7 +23,7 @@ let rec exec v s = match s with
             match exec_list localVars code with
                 | Return v -> v
                 | _ -> `Null
-        in Function.registry#add name f; NoOp
+        in Registry.functions#add name f; NoOp
     | Echo e ->
         let `String s = to_string (eval v e) in
         print_string s;
