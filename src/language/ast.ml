@@ -54,7 +54,7 @@ type stmt =
     | Return of expr
     | IgnoreResult of expr
     | FunctionDef of string * string list * stmt list
-    | ClassDef of string * string option * string list * classDefElement list (* name, parent, implements, content *)
+    | ClassDef of string * bool * bool * bool * bool * string option * string list * classDefElement list (* name, isStatic, isAbstract, isFinal, isInterface, parent, implements, content *)
     | If of expr * stmt list
     | IfElse of expr * stmt list * stmt list
     | While of expr * stmt list

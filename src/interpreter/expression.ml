@@ -99,6 +99,12 @@ let rec eval v e = match e with
     | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
     | Comparison (op, f, g) -> `Bool (compare_all op (eval v f) (eval v g))
     | FunctionCall (name, argValues) -> Registry.functions#exec name (List.map (eval v) argValues)
+    | ClassConstant (className, constantName) -> (Registry.classes#get className)#getConstant constantName
+    | MethodCall (obj, methodName, argValues) -> begin match eval v obj with
+        | `Object o -> o#getMethod methodName (List.map (eval v) argValues)
+        | _ -> raise BadType
+    end
+    | StaticMethodCall (className, methodName, argValues) -> (Registry.classes#get className)#getStaticMethod methodName (List.map (eval v) argValues)
     | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
         let addElement (e1, e2) = match eval v e1 with
             | `Null -> phpArray#offsetSet None (eval v e2)
@@ -116,7 +122,11 @@ let rec eval v e = match e with
                 | None -> arr#offsetSet None value
                 | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
             end; value
-    | StaticProperty (className, propName) -> (Registry.classes# get className)#getStaticProperty propName
+        | StaticProperty (className, propName) -> let value = eval v f in (Registry.classes#get className)#setStaticProperty propName value;value
+        | Property (obj, propName) -> begin match eval_assignable v obj with
+            | `Object o -> let value = eval v f in o#setProperty propName value; value
+            | _ -> raise BadType
+        end
     end
     | BinaryAssign (op, a, f) -> eval v (Assign (a, BinaryOperation (op, Assignable a, f)))
     | PreInc a -> eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))
@@ -132,5 +142,10 @@ and eval_assignable v a = match a with
             | Some o -> match eval_assignable v a with
                 | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
                 | _ -> raise BadType
+    end
+    | StaticProperty (className, propName) -> (Registry.classes#get className)#getStaticProperty propName
+    | Property (obj, propName) -> begin match eval_assignable v obj with
+        | `Object o -> o#getProperty propName
+        | _ -> raise BadType
     end
 

@@ -24,6 +24,30 @@ let rec exec v s = match s with
                 | Return v -> v
                 | _ -> `Null
         in Registry.functions#add name f; NoOp
+    | ClassDef (className, isStatic, isAbstract, isFinal, isInterface, parentName, implementsNames, contents) ->
+        let constants = ref [] in
+        let properties = ref [] in
+        let methods = ref [] in
+        let abstractMethods = ref [] in
+        let f c = match c with
+            | ConstantDef (name, e) -> constants := (name, eval v e)::!constants
+            | PropertyDef (name, isStatic, visibility, init) -> let inited = match init with None -> `Null | Some i -> eval v i in properties := (name, isStatic, visibility, inited)::!properties
+            | MethodDef (name, isStatic, visibility, argNames, code) ->
+                let f argValues =
+                    let localVars = new Variable.variableRegistry in
+                    List.iter2 (fun name value -> localVars#set name value) argNames argValues;
+                    match exec_list localVars code with
+                        | Return v -> v
+                        | _ -> `Null
+                in
+                methods := (name, isStatic, visibility, f)::!methods
+            | AbstractMethodDef (name, isStatic, visibility, argNames) -> abstractMethods := (name, isStatic, visibility, argNames)::!abstractMethods
+        in
+        List.iter f contents;
+        let parent = match parentName with None -> None | Some n -> Some (Registry.classes#get n) in
+        let implements = List.map (Registry.classes#get) implementsNames in
+        Registry.classes#add className (new Object.phpClass className isStatic isAbstract isFinal isInterface parent implements !constants !properties !methods !abstractMethods);
+        NoOp
     | Echo e ->
         let `String s = to_string (eval v e) in
         print_string s;
