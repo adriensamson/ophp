@@ -18,7 +18,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token T_INC T_DEC T_SL T_SR T_LOGICAL_OR T_LOGICAL_XOR T_LOGICAL_AND T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_BOOLEAN_OR T_BOOLEAN_AND T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_IS_GREATER_OR_EQUAL T_IS_SMALLER_OR_EQUAL T_DOUBLE_ARROW T_CURLY_OPEN T_DOLLAR_OPEN_CURLY_BRACES
 
-%token T_ECHO T_FUNCTION T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY
+%token T_ECHO T_FUNCTION T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
 %token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE
 
@@ -91,6 +91,7 @@ control_stmt:
     | T_BREAK T_LNUMBER TT_SEMI_COLON { Ast.Break $2 }
     | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }
     | T_CONTINUE T_LNUMBER TT_SEMI_COLON { Ast.Continue $2 }
+    | T_CLASS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE { Ast.ClassDef ($2, false, false, false, false, None, [], $4) }
 
 stmt:
     | control_stmt { $1 }
@@ -101,6 +102,25 @@ incomplete_if_stmt:
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs elseif { make_if $3 $5 ($6 @ [$7]) }
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs incomplete_elseif { make_if $3 $5 ($6 @ [$7]) }
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR any_control_stmt_list { make_if $3 $5 [] }
+
+class_def_content_list:
+      { [] }
+    | class_def_content class_def_content_list { $1::$2 }
+
+class_def_content:
+    | T_PUBLIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Public, None) }
+    | T_PUBLIC T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, None) }
+    | T_PUBLIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Public, Some $4) }
+    | T_PUBLIC T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, Some $5) }
+    | T_PROTECTED T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Protected, None) }
+    | T_PROTECTED T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Protected, None) }
+    | T_PROTECTED T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Protected, Some $4) }
+    | T_PROTECTED T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Protected, Some $5) }
+    | T_PRIVATE T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Private, None) }
+    | T_PRIVATE T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Private, None) }
+    | T_PRIVATE T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Private, Some $4) }
+    | T_PRIVATE T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Private, Some $5) }
+    
 
 argument_definition_list:
       { [] }

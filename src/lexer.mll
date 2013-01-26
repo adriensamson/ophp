@@ -173,6 +173,17 @@ and token = parse
     | "as" { T_AS }
     | "break" { T_BREAK }
     | "continue" { T_CONTINUE }
+    | "class" { T_CLASS }
+    | "extends" { T_EXTENDS }
+    | "abstract" { T_ABSTRACT }
+    | "final" { T_FINAL }
+    | "static" { T_STATIC }
+    | "implements" { T_IMPLEMENTS }
+    | "interface" { T_INTERFACE }
+    | "public" { T_PUBLIC }
+    | "protected" { T_PROTECTED }
+    | "private" { T_PRIVATE }
+    
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
     | '(' ' '* ("double"|"float") ' '* ')' { T_DOUBLE_CAST }
