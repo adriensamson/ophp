@@ -149,9 +149,13 @@ assignable:
     | TT_VARIABLE_VARIABLE { Ast.VariableVariable (Ast.Assignable (Ast.Variable $1)) }
     | T_DOLLAR_OPEN_CURLY_BRACES expr TT_RIGHT_BRACE { Ast.VariableVariable $2 }
     | T_STRING T_DOUBLE_COLON T_VARIABLE { Ast.StaticProperty ($1, $3) }
-    | assignable TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, Some $3) }
-    | assignable TT_LEFT_BRACKET TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, None) }
-    | assignable T_OBJECT_OPERATOR T_STRING { Ast.Property ($1, $3) }
+    | fluent TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, Some $3) }
+    | fluent TT_LEFT_BRACKET TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, None) }
+    | fluent T_OBJECT_OPERATOR T_STRING { Ast.Property ($1, $3) }
+
+fluent:
+    | assignable { Ast.Assignable $1 }
+    | fluent T_OBJECT_OPERATOR T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.MethodCall ($1, $3, $5) }
 
 double_quoted_content_list:
       { [] }
@@ -215,8 +219,7 @@ expr:
     | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
     | T_NEW T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
-    | assignable T_OBJECT_OPERATOR T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.MethodCall (Ast.Assignable $1, $3, $5) }
     | T_STRING T_DOUBLE_COLON T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.StaticMethodCall ($1, $3, $5) }
-    | assignable { Ast.Assignable $1 }
+    | fluent { $1 }
 ;
 %%

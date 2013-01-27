@@ -46,8 +46,8 @@ type expr =
 and assignable =
     | Variable of string
     | VariableVariable of expr
-    | ArrayOffset of assignable * expr option
-    | Property of assignable * string
+    | ArrayOffset of expr * expr option
+    | Property of expr * string
     | StaticProperty of string * string
 
 type stmt =

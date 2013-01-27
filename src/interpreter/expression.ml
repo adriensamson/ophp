@@ -118,15 +118,15 @@ let rec eval v e = match e with
     | Assign (a, f) -> begin match a with
         | Variable s -> let g = eval v f in v.vars#set s g; g
         | VariableVariable e -> let `String s = to_string (eval v e) in let g = eval v f in v.vars#set s g; g
-        | ArrayOffset (a, o) ->
-            let arr = match eval_assignable v a with `Array arr -> arr | _ -> raise BadType in
+        | ArrayOffset (e, o) ->
+            let arr = match eval v e with `Array arr -> arr | _ -> raise BadType in
             let value = eval v f in
             begin match o with
                 | None -> arr#offsetSet None value
                 | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
             end; value
         | StaticProperty (className, propName) -> let value = eval v f in (Registry.classes#get className)#setStaticProperty v.callingClass propName value;value
-        | Property (obj, propName) -> begin match eval_assignable v obj with
+        | Property (obj, propName) -> begin match eval v obj with
             | `Object o -> let value = eval v f in o#setProperty v.callingClass propName value; value
             | _ -> raise BadType
         end
@@ -139,15 +139,15 @@ let rec eval v e = match e with
 and eval_assignable v a = match a with
     | Variable s -> v.vars#get s
     | VariableVariable e -> let `String s = to_string (eval v e) in v.vars#get s
-    | ArrayOffset (a, o) -> begin
+    | ArrayOffset (e, o) -> begin
         match o with
             | None -> raise MissingArrayOffset
-            | Some o -> match eval_assignable v a with
+            | Some o -> match eval v e with
                 | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
                 | _ -> raise BadType
     end
     | StaticProperty (className, propName) -> (Registry.classes#get className)#getStaticProperty v.callingClass propName
-    | Property (obj, propName) -> begin match eval_assignable v obj with
+    | Property (obj, propName) -> begin match eval v obj with
         | `Object o -> o#getProperty v.callingClass propName
         | _ -> raise BadType
     end
