@@ -76,6 +76,8 @@ let rec compare_all op val1 val2 = match op with
             | Greater -> cc > 0
             | NotEqual | NotIdentical | Identical -> assert false
 
+type evalContext = {vars : Variable.variableRegistry; obj: value phpObject option; callingClass: value phpClass option}
+
 let rec eval v e = match e with
     | ConstValue f -> f
     | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (eval v e) in s) l))
@@ -101,10 +103,10 @@ let rec eval v e = match e with
     | FunctionCall (name, argValues) -> Registry.functions#exec name (List.map (eval v) argValues)
     | ClassConstant (className, constantName) -> (Registry.classes#get className)#getConstant constantName
     | MethodCall (obj, methodName, argValues) -> begin match eval v obj with
-        | `Object o -> o#getMethod methodName (List.map (eval v) argValues)
+        | `Object o -> o#getMethod v.callingClass methodName (List.map (eval v) argValues)
         | _ -> raise BadType
     end
-    | StaticMethodCall (className, methodName, argValues) -> (Registry.classes#get className)#getStaticMethod methodName (List.map (eval v) argValues)
+    | StaticMethodCall (className, methodName, argValues) -> (Registry.classes#get className)#getStaticMethod v.callingClass methodName (List.map (eval v) argValues)
     | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
         let addElement (e1, e2) = match eval v e1 with
             | `Null -> phpArray#offsetSet None (eval v e2)
@@ -114,8 +116,8 @@ let rec eval v e = match e with
         `Array phpArray
     | NewObject (className, argValues) -> `Object ((Registry.classes#get className)#newObject (List.map (eval v) argValues))
     | Assign (a, f) -> begin match a with
-        | Variable s -> let g = eval v f in v#set s g; g
-        | VariableVariable e -> let `String s = to_string (eval v e) in let g = eval v f in v#set s g; g
+        | Variable s -> let g = eval v f in v.vars#set s g; g
+        | VariableVariable e -> let `String s = to_string (eval v e) in let g = eval v f in v.vars#set s g; g
         | ArrayOffset (a, o) ->
             let arr = match eval_assignable v a with `Array arr -> arr | _ -> raise BadType in
             let value = eval v f in
@@ -123,9 +125,9 @@ let rec eval v e = match e with
                 | None -> arr#offsetSet None value
                 | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
             end; value
-        | StaticProperty (className, propName) -> let value = eval v f in (Registry.classes#get className)#setStaticProperty propName value;value
+        | StaticProperty (className, propName) -> let value = eval v f in (Registry.classes#get className)#setStaticProperty v.callingClass propName value;value
         | Property (obj, propName) -> begin match eval_assignable v obj with
-            | `Object o -> let value = eval v f in o#setProperty propName value; value
+            | `Object o -> let value = eval v f in o#setProperty v.callingClass propName value; value
             | _ -> raise BadType
         end
     end
@@ -135,8 +137,8 @@ let rec eval v e = match e with
     | PreDec a -> eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1))))
     | PostDec a -> let ret = eval v (Assignable a) in let _ = eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in ret
 and eval_assignable v a = match a with
-    | Variable s -> v#get s
-    | VariableVariable e -> let `String s = to_string (eval v e) in v#get s
+    | Variable s -> v.vars#get s
+    | VariableVariable e -> let `String s = to_string (eval v e) in v.vars#get s
     | ArrayOffset (a, o) -> begin
         match o with
             | None -> raise MissingArrayOffset
@@ -144,9 +146,9 @@ and eval_assignable v a = match a with
                 | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
                 | _ -> raise BadType
     end
-    | StaticProperty (className, propName) -> (Registry.classes#get className)#getStaticProperty propName
+    | StaticProperty (className, propName) -> (Registry.classes#get className)#getStaticProperty v.callingClass propName
     | Property (obj, propName) -> begin match eval_assignable v obj with
-        | `Object o -> o#getProperty propName
+        | `Object o -> o#getProperty v.callingClass propName
         | _ -> raise BadType
     end
 

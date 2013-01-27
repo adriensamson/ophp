@@ -31,11 +31,11 @@ class type ['a] phpClass =
         
         method getConstant : string -> 'a
         
-        method getStaticProperty : string -> 'a
-        method setStaticProperty : string -> 'a -> unit
+        method getStaticProperty : 'a phpClass option -> string -> 'a
+        method setStaticProperty : 'a phpClass option -> string -> 'a -> unit
         
-        method getStaticMethod : string -> 'a list -> 'a
-        method getMethod : string -> 'a list -> 'a
+        method getStaticMethod : 'a phpClass option -> string -> 'a list -> 'a
+        method getMethod : 'a phpObject -> 'a phpClass option -> string -> 'a list -> 'a
         
         method newObject : 'a list -> 'a phpObject
     end
@@ -44,13 +44,14 @@ and ['a] phpObject =
     object
         method objectClass : 'a phpClass
         
-        method getProperty : string -> 'a
-        method setProperty : string -> 'a -> unit
+        method getProperty : 'a phpClass option -> string -> 'a
+        method setProperty : 'a phpClass option -> string -> 'a -> unit
         
-        method getMethod : string -> 'a list -> 'a
+        method getMethod : 'a phpClass option -> string -> 'a list -> 'a
     end
 
 exception BadType
+exception BadVisibility
 
 type value = [
     | `Null
