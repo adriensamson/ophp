@@ -16,7 +16,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token TT_MUL TT_DIV TT_PLUS TT_MINUS TT_SEMI_COLON TT_LEFT_PAR TT_RIGHT_PAR TT_LEFT_BRACKET TT_RIGHT_BRACKET TT_LEFT_BRACE TT_RIGHT_BRACE TT_COMMA TT_TILDE TT_AT TT_EXCL TT_MOD TT_CONCAT TT_EQUAL TT_INTEROGATION TT_DOUBLE_COLON TT_BITWISE_OR TT_BITWISE_XOR TT_BITWISE_AND TT_GREATER TT_SMALLER TT_DOUBLE_QUOTE
 
-%token T_INC T_DEC T_SL T_SR T_LOGICAL_OR T_LOGICAL_XOR T_LOGICAL_AND T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_BOOLEAN_OR T_BOOLEAN_AND T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_IS_GREATER_OR_EQUAL T_IS_SMALLER_OR_EQUAL T_DOUBLE_ARROW T_CURLY_OPEN T_DOLLAR_OPEN_CURLY_BRACES
+%token T_INC T_DEC T_SL T_SR T_LOGICAL_OR T_LOGICAL_XOR T_LOGICAL_AND T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_BOOLEAN_OR T_BOOLEAN_AND T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_IS_GREATER_OR_EQUAL T_IS_SMALLER_OR_EQUAL T_DOUBLE_ARROW T_OBJECT_OPERATOR T_CURLY_OPEN T_DOLLAR_OPEN_CURLY_BRACES T_DOUBLE_COLON
 
 %token T_ECHO T_FUNCTION T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
@@ -103,24 +103,22 @@ incomplete_if_stmt:
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs incomplete_elseif { make_if $3 $5 ($6 @ [$7]) }
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR any_control_stmt_list { make_if $3 $5 [] }
 
+visibility:
+    | T_PUBLIC { Typing.Public }
+    | T_PROTECTED { Typing.Protected }
+    | T_PRIVATE { Typing.Private }
+
 class_def_content_list:
       { [] }
     | class_def_content class_def_content_list { $1::$2 }
 
 class_def_content:
-    | T_PUBLIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Public, None) }
-    | T_PUBLIC T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, None) }
-    | T_PUBLIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Public, Some $4) }
-    | T_PUBLIC T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, Some $5) }
-    | T_PROTECTED T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Protected, None) }
-    | T_PROTECTED T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Protected, None) }
-    | T_PROTECTED T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Protected, Some $4) }
-    | T_PROTECTED T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Protected, Some $5) }
-    | T_PRIVATE T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Private, None) }
-    | T_PRIVATE T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Private, None) }
-    | T_PRIVATE T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Private, Some $4) }
-    | T_PRIVATE T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Private, Some $5) }
-    
+    | visibility T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, $1, None) }
+    | visibility T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, None) }
+    | visibility T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Public, Some $4) }
+    | visibility T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, Some $5) }
+    | visibility T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.MethodDef ($3, false, $1, $5, $8) }
+    | visibility T_STATIC T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.MethodDef ($4, true, $1, $6, $9) }
 
 argument_definition_list:
       { [] }
@@ -150,8 +148,10 @@ assignable:
     | T_VARIABLE { Ast.Variable $1 }
     | TT_VARIABLE_VARIABLE { Ast.VariableVariable (Ast.Assignable (Ast.Variable $1)) }
     | T_DOLLAR_OPEN_CURLY_BRACES expr TT_RIGHT_BRACE { Ast.VariableVariable $2 }
+    | T_STRING T_DOUBLE_COLON T_VARIABLE { Ast.StaticProperty ($1, $3) }
     | assignable TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, Some $3) }
     | assignable TT_LEFT_BRACKET TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, None) }
+    | assignable T_OBJECT_OPERATOR T_STRING { Ast.Property ($1, $3) }
 
 double_quoted_content_list:
       { [] }
@@ -214,6 +214,9 @@ expr:
     
     | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
+    | T_NEW T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
+    | assignable T_OBJECT_OPERATOR T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.MethodCall (Ast.Assignable $1, $3, $5) }
+    | T_STRING T_DOUBLE_COLON T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.StaticMethodCall ($1, $3, $5) }
     | assignable { Ast.Assignable $1 }
 ;
 %%

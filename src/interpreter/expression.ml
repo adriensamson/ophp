@@ -112,6 +112,7 @@ let rec eval v e = match e with
         in
         List.iter addElement l;
         `Array phpArray
+    | NewObject (className, argValues) -> `Object ((Registry.classes#get className)#newObject (List.map (eval v) argValues))
     | Assign (a, f) -> begin match a with
         | Variable s -> let g = eval v f in v#set s g; g
         | VariableVariable e -> let `String s = to_string (eval v e) in let g = eval v f in v#set s g; g

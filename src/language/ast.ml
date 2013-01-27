@@ -42,6 +42,7 @@ type expr =
     | PreDec of assignable
     | PostDec of assignable
     | ArrayConstructor of (expr * expr) list
+    | NewObject of string * expr list
 and assignable =
     | Variable of string
     | VariableVariable of expr

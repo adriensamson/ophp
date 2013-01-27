@@ -152,6 +152,8 @@ and token = parse
     | ">=" { T_IS_GREATER_OR_EQUAL }
     | "<=" { T_IS_SMALLER_OR_EQUAL }
     
+    | "::" { T_DOUBLE_COLON }
+    | "->" { T_OBJECT_OPERATOR }
     | "=>" { T_DOUBLE_ARROW }
     
     | "echo" { T_ECHO }
