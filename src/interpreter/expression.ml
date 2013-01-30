@@ -76,7 +76,20 @@ let rec compare_all op val1 val2 = match op with
             | Greater -> cc > 0
             | NotEqual | NotIdentical | Identical -> assert false
 
-type evalContext = {vars : Variable.variableRegistry; obj: value phpObject option; callingClass: value phpClass option}
+type evalContext = {
+    vars : Variable.variableRegistry;
+    obj: value phpObject option;
+    callingClass: value phpClass option;
+    staticClass: value phpClass option
+}
+
+let makeContext ?obj ?callingClass ?staticClass vars =
+    {
+        vars = vars;
+        obj = obj;
+        callingClass = callingClass;
+        staticClass = staticClass
+    }
 
 let rec eval v e = match e with
     | ConstValue f -> f
@@ -106,7 +119,10 @@ let rec eval v e = match e with
         | `Object o -> o#getMethod v.callingClass methodName (List.map (eval v) argValues)
         | _ -> raise BadType
     end
-    | StaticMethodCall (className, methodName, argValues) -> (Registry.classes#get className)#getStaticMethod v.callingClass methodName (List.map (eval v) argValues)
+    | StaticMethodCall (className, methodName, argValues) ->
+        (* TODO: check for static-form parent class method call *)
+        let cl = Registry.classes#get className
+        in cl#getStaticMethod cl v.callingClass methodName (List.map (eval v) argValues)
     | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
         let addElement (e1, e2) = match eval v e1 with
             | `Null -> phpArray#offsetSet None (eval v e2)

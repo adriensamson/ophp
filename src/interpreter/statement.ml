@@ -20,7 +20,7 @@ let rec exec v s = match s with
         let f argValues =
             let localVars = new Variable.variableRegistry in
             List.iter2 (fun name value -> localVars#set name value) argNames argValues;
-            match exec_list {Expression.vars = localVars; Expression.obj = None; Expression.callingClass = None} code with
+            match exec_list (Expression.makeContext localVars) code with
                 | Return v -> v
                 | _ -> `Null
         in Registry.functions#add name f; NoOp
@@ -35,10 +35,10 @@ let rec exec v s = match s with
             | PropertyDef (name, isStatic, visibility, init) -> let inited = match init with None -> `Null | Some i -> eval v i in properties := (name, isStatic, visibility, inited)::!properties
             | MethodDef (name, isStatic, visibility, argNames, code) ->
                 if isStatic then begin
-                    let f inClass argValues =
+                    let f inClass finalClass argValues =
                         let localVars = new Variable.variableRegistry in
                         List.iter2 (fun name value -> localVars#set name value) argNames argValues;
-                        match exec_list {Expression.vars = localVars; Expression.obj = None; Expression.callingClass = Some inClass} code with
+                        match exec_list (Expression.makeContext ~callingClass:inClass localVars) code with
                             | Return v -> v
                             | _ -> `Null
                     in
@@ -47,7 +47,7 @@ let rec exec v s = match s with
                     let f inClass obj argValues =
                         let localVars = new Variable.variableRegistry in
                         List.iter2 (fun name value -> localVars#set name value) argNames argValues;
-                        match exec_list {Expression.vars = localVars; Expression.obj = Some obj; Expression.callingClass = Some inClass} code with
+                        match exec_list (Expression.makeContext ~obj ~callingClass:inClass localVars) code with
                             | Return v -> v
                             | _ -> `Null
                     in

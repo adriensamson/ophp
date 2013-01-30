@@ -34,7 +34,7 @@ class type ['a] phpClass =
         method getStaticProperty : 'a phpClass option -> string -> 'a
         method setStaticProperty : 'a phpClass option -> string -> 'a -> unit
         
-        method getStaticMethod : 'a phpClass option -> string -> 'a list -> 'a
+        method getStaticMethod : 'a phpClass -> 'a phpClass option -> string -> 'a list -> 'a
         method getMethod : 'a phpObject -> 'a phpClass option -> string -> 'a list -> 'a
         
         method newObject : 'a list -> 'a phpObject
