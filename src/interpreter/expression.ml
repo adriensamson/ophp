@@ -91,6 +91,10 @@ let makeContext ?obj ?callingClass ?staticClass vars =
         staticClass = staticClass
     }
 
+let getSome o = match o with
+    | None -> assert false
+    | Some a -> a
+
 let rec eval v e = match e with
     | ConstValue f -> f
     | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (eval v e) in s) l))
@@ -119,10 +123,22 @@ let rec eval v e = match e with
         | `Object o -> o#getMethod v.callingClass methodName (List.map (eval v) argValues)
         | _ -> raise BadType
     end
-    | StaticMethodCall (className, methodName, argValues) ->
-        (* TODO: check for static-form parent class method call *)
-        let cl = Registry.classes#get className
-        in cl#getStaticMethod cl v.callingClass methodName (List.map (eval v) argValues)
+    | StaticMethodCall (classRef, methodName, argValues) -> begin
+        let phpClass = match classRef with
+            | ClassName className -> Registry.classes#get className
+            | Self -> getSome v.callingClass
+            | Parent -> getSome (getSome v.callingClass)#parent
+            | Static -> getSome v.staticClass
+        in
+        let m = if v.obj <> None && (getSome v.obj)#objectClass#instanceOf phpClass then
+            try
+                phpClass#getMethod (getSome v.obj) v.callingClass methodName
+            with
+                | Not_found -> phpClass#getStaticMethod phpClass v.callingClass methodName
+        else
+            phpClass#getStaticMethod phpClass v.callingClass methodName
+        in m (List.map (eval v) argValues)
+    end
     | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
         let addElement (e1, e2) = match eval v e1 with
             | `Null -> phpArray#offsetSet None (eval v e2)
@@ -141,7 +157,16 @@ let rec eval v e = match e with
                 | None -> arr#offsetSet None value
                 | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
             end; value
-        | StaticProperty (className, propName) -> let value = eval v f in (Registry.classes#get className)#setStaticProperty v.callingClass propName value;value
+        | StaticProperty (classRef, propName) -> begin
+            let phpClass = match classRef with
+                | ClassName className -> Registry.classes#get className
+                | Self -> getSome v.callingClass
+                | Parent -> getSome (getSome v.callingClass)#parent
+                | Static -> getSome v.staticClass
+            in
+            let value = eval v f in phpClass#setStaticProperty v.callingClass propName value;
+            value
+        end
         | Property (obj, propName) -> begin match eval v obj with
             | `Object o -> let value = eval v f in o#setProperty v.callingClass propName value; value
             | _ -> raise BadType
@@ -162,7 +187,15 @@ and eval_assignable v a = match a with
                 | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
                 | _ -> raise BadType
     end
-    | StaticProperty (className, propName) -> (Registry.classes#get className)#getStaticProperty v.callingClass propName
+    | StaticProperty (classRef, propName) -> begin
+        let phpClass = match classRef with
+            | ClassName className -> Registry.classes#get className
+            | Self -> getSome v.callingClass
+            | Parent -> getSome (getSome v.callingClass)#parent
+            | Static -> getSome v.staticClass
+        in
+        phpClass#getStaticProperty v.callingClass propName
+    end
     | Property (obj, propName) -> begin match eval v obj with
         | `Object o -> o#getProperty v.callingClass propName
         | _ -> raise BadType

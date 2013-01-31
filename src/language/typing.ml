@@ -29,6 +29,8 @@ class type ['a] phpClass =
         method parent : 'a phpClass option
         method implements : 'a phpClass list
         
+        method instanceOf : 'a phpClass -> bool
+        
         method getConstant : string -> 'a
         
         method getStaticProperty : 'a phpClass option -> string -> 'a

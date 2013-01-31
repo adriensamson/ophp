@@ -38,7 +38,7 @@ let rec exec v s = match s with
                     let f inClass finalClass argValues =
                         let localVars = new Variable.variableRegistry in
                         List.iter2 (fun name value -> localVars#set name value) argNames argValues;
-                        match exec_list (Expression.makeContext ~callingClass:inClass localVars) code with
+                        match exec_list (Expression.makeContext ~callingClass:inClass ~staticClass:finalClass localVars) code with
                             | Return v -> v
                             | _ -> `Null
                     in

@@ -21,13 +21,19 @@ type comparisonOperator =
     | NotEqual
     | NotIdentical
 
+type classReference =
+    | ClassName of string
+    | Parent
+    | Self
+    | Static
+
 type expr =
     | ConstValue of Typing.value
     | ConcatList of expr list
     | Assignable of assignable
     | FunctionCall of string * expr list
     | MethodCall of expr * string * expr list
-    | StaticMethodCall of string * string * expr list
+    | StaticMethodCall of classReference * string * expr list
     | ClassConstant of string * string
     | BinaryOperation of binaryOperator * expr * expr
     | Comparison of comparisonOperator * expr * expr
@@ -48,7 +54,7 @@ and assignable =
     | VariableVariable of expr
     | ArrayOffset of expr * expr option
     | Property of expr * string
-    | StaticProperty of string * string
+    | StaticProperty of classReference * string
 
 type stmt =
     | Echo of expr

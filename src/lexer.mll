@@ -185,6 +185,8 @@ and token = parse
     | "public" { T_PUBLIC }
     | "protected" { T_PROTECTED }
     | "private" { T_PRIVATE }
+    | "parent" { T_PARENT }
+    | "self" { T_SELF }
     
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }

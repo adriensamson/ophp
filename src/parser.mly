@@ -18,7 +18,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token T_INC T_DEC T_SL T_SR T_LOGICAL_OR T_LOGICAL_XOR T_LOGICAL_AND T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_BOOLEAN_OR T_BOOLEAN_AND T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_IS_GREATER_OR_EQUAL T_IS_SMALLER_OR_EQUAL T_DOUBLE_ARROW T_OBJECT_OPERATOR T_CURLY_OPEN T_DOLLAR_OPEN_CURLY_BRACES T_DOUBLE_COLON
 
-%token T_ECHO T_FUNCTION T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE
+%token T_ECHO T_FUNCTION T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE T_PARENT T_SELF
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
 %token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE
 
@@ -92,6 +92,7 @@ control_stmt:
     | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }
     | T_CONTINUE T_LNUMBER TT_SEMI_COLON { Ast.Continue $2 }
     | T_CLASS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE { Ast.ClassDef ($2, false, false, false, false, None, [], $4) }
+    | T_CLASS T_STRING T_EXTENDS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE { Ast.ClassDef ($2, false, false, false, false, Some $4, [], $6) }
 
 stmt:
     | control_stmt { $1 }
@@ -148,7 +149,7 @@ assignable:
     | T_VARIABLE { Ast.Variable $1 }
     | TT_VARIABLE_VARIABLE { Ast.VariableVariable (Ast.Assignable (Ast.Variable $1)) }
     | T_DOLLAR_OPEN_CURLY_BRACES expr TT_RIGHT_BRACE { Ast.VariableVariable $2 }
-    | T_STRING T_DOUBLE_COLON T_VARIABLE { Ast.StaticProperty ($1, $3) }
+    | class_reference T_DOUBLE_COLON T_VARIABLE { Ast.StaticProperty ($1, $3) }
     | fluent TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, Some $3) }
     | fluent TT_LEFT_BRACKET TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, None) }
     | fluent T_OBJECT_OPERATOR T_STRING { Ast.Property ($1, $3) }
@@ -171,7 +172,9 @@ expr:
     | T_TRUE { Ast.ConstValue (`Bool true) }
     | TT_CONSTANT_STRING { Ast.ConstValue (`String $1) }
     | TT_DOUBLE_QUOTE double_quoted_content_list TT_DOUBLE_QUOTE { Ast.ConcatList $2 }
+    
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
+    
     | expr TT_PLUS expr { Ast.BinaryOperation(Ast.Plus, $1, $3) }
     | expr TT_MINUS expr { Ast.BinaryOperation(Ast.Minus, $1, $3) }
     | expr TT_MUL expr { Ast.BinaryOperation(Ast.Mult, $1, $3) }
@@ -219,7 +222,14 @@ expr:
     | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
     | T_NEW T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
-    | T_STRING T_DOUBLE_COLON T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.StaticMethodCall ($1, $3, $5) }
+    | class_reference T_DOUBLE_COLON T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.StaticMethodCall ($1, $3, $5) }
+    
     | fluent { $1 }
+    
+class_reference:
+    | T_STRING { Ast.ClassName $1 }
+    | T_SELF { Ast.Self }
+    | T_STATIC { Ast.Static }
+    | T_PARENT { Ast.Parent }
 ;
 %%

@@ -1,3 +1,7 @@
+let tryParent o = match o with
+    | None -> raise Not_found
+    | Some a -> a
+
 class phpClass
     (name : string)
     (isStatic : bool)
@@ -24,6 +28,10 @@ class phpClass
         method parent = parent
         method implements = implements
         
+        method instanceOf c = if c = (self :> phpClass) then true else match parent with
+            | None -> false
+            | Some p -> p#instanceOf c
+        
         method getConstant constantName =
             let rec find l = match l with
                 | [] -> raise Not_found
@@ -32,20 +40,32 @@ class phpClass
             in find constants
         
         method getStaticProperty callingClass propName =
-            let (vis, value) = Hashtbl.find staticProperties propName in
-            value
+            try
+                let (vis, value) = Hashtbl.find staticProperties propName in
+                value
+            with
+                | Not_found -> (tryParent parent)#getStaticProperty callingClass propName
         
         method setStaticProperty callingClass propName value =
-            let (vis, _) = Hashtbl.find staticProperties propName in
-            Hashtbl.replace staticProperties propName (vis, value)
+            try
+                let (vis, _) = Hashtbl.find staticProperties propName in
+                Hashtbl.replace staticProperties propName (vis, value)
+            with
+                | Not_found -> (tryParent parent)#setStaticProperty callingClass propName value
         
         method getStaticMethod finalClass callingClass methodName =
-            let (vis, f) = Hashtbl.find staticMethods methodName in
-            f (self :> phpClass) finalClass
+            try
+                let (vis, f) = Hashtbl.find staticMethods methodName in
+                f (self :> phpClass) finalClass
+            with
+                | Not_found -> (tryParent parent)#getStaticMethod finalClass callingClass methodName
 
         method getMethod obj callingClass methodName =
-            let (vis, f) = Hashtbl.find methods methodName in
-            f (self :> phpClass) obj
+            try
+                let (vis, f) = Hashtbl.find methods methodName in
+                f (self :> phpClass) obj
+            with
+                | Not_found -> (tryParent parent)#getMethod obj callingClass methodName
 
         method newObject l =
             let o = new phpObject (self :> phpClass) (List.map (fun (name, _, vis, value) -> (name, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL)) in
