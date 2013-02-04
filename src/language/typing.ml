@@ -33,11 +33,11 @@ class type ['a] phpClass =
         
         method getConstant : string -> 'a
         
-        method getStaticProperty : 'a phpClass option -> string -> 'a
-        method setStaticProperty : 'a phpClass option -> string -> 'a -> unit
+        method getStaticProperty : string -> visibility * 'a
+        method setStaticProperty : string -> visibility * ('a -> unit)
         
-        method getStaticMethod : 'a phpClass -> 'a phpClass option -> string -> 'a list -> 'a
-        method getMethod : 'a phpObject -> 'a phpClass option -> string -> 'a list -> 'a
+        method getStaticMethod : string -> visibility * ('a phpClass -> 'a list -> 'a)
+        method getMethod : string -> visibility * ('a phpObject -> 'a list -> 'a)
         
         method newObject : 'a list -> 'a phpObject
     end
@@ -46,10 +46,8 @@ and ['a] phpObject =
     object
         method objectClass : 'a phpClass
         
-        method getProperty : 'a phpClass option -> string -> 'a
-        method setProperty : 'a phpClass option -> string -> 'a -> unit
-        
-        method getMethod : 'a phpClass option -> string -> 'a list -> 'a
+        method getProperty : 'a phpClass * string -> visibility * 'a
+        method setProperty : 'a phpClass * string -> visibility * ('a -> unit)
     end
 
 exception BadType

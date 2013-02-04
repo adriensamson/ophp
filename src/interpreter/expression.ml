@@ -120,23 +120,23 @@ let rec eval v e = match e with
     | FunctionCall (name, argValues) -> Registry.functions#exec name (List.map (eval v) argValues)
     | ClassConstant (className, constantName) -> (Registry.classes#get className)#getConstant constantName
     | MethodCall (obj, methodName, argValues) -> begin match eval v obj with
-        | `Object o -> o#getMethod v.callingClass methodName (List.map (eval v) argValues)
+        | `Object o -> Object.getObjectMethod o v.callingClass methodName (List.map (eval v) argValues)
         | _ -> raise BadType
     end
     | StaticMethodCall (classRef, methodName, argValues) -> begin
-        let phpClass = match classRef with
-            | ClassName className -> Registry.classes#get className
-            | Self -> getSome v.callingClass
-            | Parent -> getSome (getSome v.callingClass)#parent
-            | Static -> getSome v.staticClass
+        let (phpClass, staticClass) = match classRef with
+            | ClassName className -> let c = Registry.classes#get className in (c, c)
+            | Self -> getSome v.callingClass, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
+            | Parent -> getSome (getSome v.callingClass)#parent, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
+            | Static -> getSome v.staticClass, getSome v.staticClass
         in
         let m = if v.obj <> None && (getSome v.obj)#objectClass#instanceOf phpClass then
             try
-                phpClass#getMethod (getSome v.obj) v.callingClass methodName
+                Object.getClassMethod phpClass v.callingClass methodName (getSome v.obj)
             with
-                | Not_found -> phpClass#getStaticMethod phpClass v.callingClass methodName
+                | Not_found -> Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
         else
-            phpClass#getStaticMethod phpClass v.callingClass methodName
+            Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
         in m (List.map (eval v) argValues)
     end
     | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
@@ -164,11 +164,11 @@ let rec eval v e = match e with
                 | Parent -> getSome (getSome v.callingClass)#parent
                 | Static -> getSome v.staticClass
             in
-            let value = eval v f in phpClass#setStaticProperty v.callingClass propName value;
+            let value = eval v f in Object.setClassStaticProperty phpClass v.callingClass propName value;
             value
         end
         | Property (obj, propName) -> begin match eval v obj with
-            | `Object o -> let value = eval v f in o#setProperty v.callingClass propName value; value
+            | `Object o -> let value = eval v f in Object.setObjectProperty o v.callingClass propName value; value
             | _ -> raise BadType
         end
     end
@@ -194,10 +194,10 @@ and eval_assignable v a = match a with
             | Parent -> getSome (getSome v.callingClass)#parent
             | Static -> getSome v.staticClass
         in
-        phpClass#getStaticProperty v.callingClass propName
+        Object.getClassStaticProperty phpClass v.callingClass propName
     end
     | Property (obj, propName) -> begin match eval v obj with
-        | `Object o -> o#getProperty v.callingClass propName
+        | `Object o -> Object.getObjectProperty o v.callingClass propName
         | _ -> raise BadType
     end
 

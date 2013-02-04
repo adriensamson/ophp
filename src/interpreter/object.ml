@@ -12,8 +12,8 @@ class phpClass
     (implements : phpClass list)
     (constants : (string * Language.Typing.value) list)
     (propertiesL : (string * bool * Language.Typing.visibility * Language.Typing.value) list)
-    (methodsL : (string * Language.Typing.visibility * (phpClass -> phpObject -> Language.Typing.value list -> Language.Typing.value)) list)
-    (staticMethodsL : (string * Language.Typing.visibility * (phpClass -> phpClass -> Language.Typing.value list -> Language.Typing.value)) list)
+    (methodsL : (string * Language.Typing.visibility * (Language.Typing.value Language.Typing.phpClass -> Language.Typing.value Language.Typing.phpObject -> Language.Typing.value list -> Language.Typing.value)) list)
+    (staticMethodsL : (string * Language.Typing.visibility * (Language.Typing.value Language.Typing.phpClass -> Language.Typing.value Language.Typing.phpClass -> Language.Typing.value list -> Language.Typing.value)) list)
     (abstractMethods : (string * bool * Language.Typing.visibility * string list) list)
     = object (self : Language.Typing.value #Language.Typing.phpClass)
     
@@ -39,67 +39,82 @@ class phpClass
                 | _::t -> find t
             in find constants
         
-        method getStaticProperty callingClass propName =
-            try
-                let (vis, value) = Hashtbl.find staticProperties propName in
-                value
-            with
-                | Not_found -> (tryParent parent)#getStaticProperty callingClass propName
+        method getStaticProperty propName =
+            Hashtbl.find staticProperties propName
         
-        method setStaticProperty callingClass propName value =
-            try
-                let (vis, _) = Hashtbl.find staticProperties propName in
-                Hashtbl.replace staticProperties propName (vis, value)
-            with
-                | Not_found -> (tryParent parent)#setStaticProperty callingClass propName value
+        method setStaticProperty propName =
+            let (vis, _) = Hashtbl.find staticProperties propName in
+            (vis, fun value -> Hashtbl.replace staticProperties propName (vis, value))
         
-        method getStaticMethod finalClass callingClass methodName =
-            try
-                let (vis, f) = Hashtbl.find staticMethods methodName in
-                f (self :> phpClass) finalClass
-            with
-                | Not_found -> (tryParent parent)#getStaticMethod finalClass callingClass methodName
-
-        method getMethod obj callingClass methodName =
-            try
-                let (vis, f) = Hashtbl.find methods methodName in
-                f (self :> phpClass) obj
-            with
-                | Not_found -> (tryParent parent)#getMethod obj callingClass methodName
-
+        method getStaticMethod methodName =
+            Hashtbl.find staticMethods methodName
+        
+        method getMethod methodName =
+            Hashtbl.find methods methodName
+        
         method newObject l =
-            let o = new phpObject (self :> phpClass) (List.map (fun (name, _, vis, value) -> (name, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL)) in
+            let o = new phpObject (self :> phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL)) in
             o
         
         initializer
             List.iter (fun (name, _, vis, value) -> Hashtbl.replace staticProperties name (vis, value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
-            List.iter (fun (name, vis, f) -> Hashtbl.replace staticMethods name (vis, f)) staticMethodsL;
-            List.iter (fun (name, vis, f) -> Hashtbl.replace methods name (vis, f)) methodsL
+            List.iter (fun (name, vis, f) -> Hashtbl.replace staticMethods name (vis, f (self :> phpClass))) staticMethodsL;
+            List.iter (fun (name, vis, f) -> Hashtbl.replace methods name (vis, f (self :> phpClass))) methodsL
             
     end
 
 and phpObject
     objectClass
-    properties
+    propertiesL
     = object (self : Language.Typing.value #Language.Typing.phpObject)
-        val mutable properties = properties;
+        val properties = Hashtbl.create 10;
         
         method objectClass = objectClass
         
-        method getProperty callingClass propName =
-            let rec find l = match l with
-                | [] -> raise Not_found
-                | (name, value)::_ when name = propName -> value
-                | _::t -> find t
-            in find properties
+        method getProperty prop =
+            Hashtbl.find properties prop
             
-        method setProperty callingClass propName value =
-            let rec replace l = match l with
-                | [] -> raise Not_found
-                | (name, _)::t when name = propName -> (name, value)::t
-                | a::t -> a::(replace t)
-            in properties <- replace properties
+        method setProperty prop =
+            let (vis, _) = Hashtbl.find properties prop in
+            (vis, fun value -> Hashtbl.replace properties prop (vis, value))
         
-        method getMethod = objectClass#getMethod (self :> phpObject)
+        initializer
+            List.iter (fun (name, vis, value) -> Hashtbl.replace properties (objectClass, name) (vis, value)) propertiesL
     end
+
+
+let rec getClassStaticProperty phpClass callingClass propName =
+    try
+        let (vis, value) = phpClass#getStaticProperty propName in
+        value
+    with
+        | Not_found -> getClassStaticProperty (tryParent phpClass#parent) callingClass propName
+let rec setClassStaticProperty phpClass callingClass propName value =
+    try
+        let (vis, f) = phpClass#setStaticProperty propName in
+        f value
+    with
+        | Not_found -> setClassStaticProperty (tryParent phpClass#parent) callingClass propName value
+let rec getClassStaticMethod phpClass callingClass methodName =
+    try
+        let (vis, m) = phpClass#getStaticMethod methodName in
+        m
+    with
+        | Not_found -> getClassStaticMethod (tryParent phpClass#parent) callingClass methodName
+let rec getClassMethod phpClass callingClass methodName =
+    try
+        let (vis, m) = phpClass#getMethod methodName in
+        m
+    with
+        | Not_found -> getClassMethod (tryParent phpClass#parent) callingClass methodName
+
+let rec getObjectProperty obj callingClass propName =
+    let (vis, value) = obj#getProperty (obj#objectClass, propName) in
+    value
+
+let rec setObjectProperty obj callingClass propName =
+    let (vis, f) = obj#setProperty (obj#objectClass, propName) in
+    f
+let getObjectMethod obj callingClass methodName =
+    getClassMethod obj#objectClass callingClass methodName obj
 
