@@ -57,8 +57,16 @@ class phpClass
             Hashtbl.find methods methodName
         
         method newObject l =
-            let o = new phpObject (self :> phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL)) in
+            let o = new phpObject (self :> phpClass) in
+            self#initObject o;
             o
+        method initObject o =
+            begin
+                match parent with
+                    | None -> ()
+                    | Some c -> c#initObject o
+            end;
+            o#addProperties (self :> phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL))
         
         initializer
             List.iter (fun (name, _, vis, value) -> Hashtbl.replace staticProperties name (vis, value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
@@ -69,7 +77,6 @@ class phpClass
 
 and phpObject
     objectClass
-    propertiesL
     = object (self : Language.Typing.value #Language.Typing.phpObject)
         val properties = Hashtbl.create 10;
         
@@ -82,8 +89,8 @@ and phpObject
             let (vis, _) = Hashtbl.find properties prop in
             (vis, fun value -> Hashtbl.replace properties prop (vis, value))
         
-        initializer
-            List.iter (fun (name, vis, value) -> Hashtbl.replace properties (objectClass, name) (vis, value)) propertiesL
+        method addProperties phpClass propertiesL =
+            List.iter (fun (name, vis, value) -> Hashtbl.replace properties (phpClass, name) (vis, value)) propertiesL
     end
 
 
@@ -119,16 +126,15 @@ let setClassStaticProperty =
 let getClassStaticMethod =
     findWithParents (fun c -> c#getStaticMethod)
 
-let rec getClassMethod =
+let getClassMethod =
     findWithParents (fun c -> c#getMethod)
 
-let rec getObjectProperty obj callingClass propName =
-    let (vis, value) = obj#getProperty (obj#objectClass, propName) in
-    value
+let getObjectProperty obj =
+    findWithParents (fun c name -> obj#getProperty (c, name)) obj#objectClass
 
-let rec setObjectProperty obj callingClass propName =
-    let (vis, f) = obj#setProperty (obj#objectClass, propName) in
-    f
+let rec setObjectProperty obj =
+    findWithParents (fun c name -> obj#setProperty (c, name)) obj#objectClass
+
 let getObjectMethod obj callingClass methodName =
     getClassMethod obj#objectClass callingClass methodName obj
 

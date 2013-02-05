@@ -40,6 +40,7 @@ class type ['a] phpClass =
         method getMethod : string -> visibility * ('a phpObject -> 'a list -> 'a)
         
         method newObject : 'a list -> 'a phpObject
+        method initObject : 'a phpObject -> unit
     end
 
 and ['a] phpObject =
@@ -48,6 +49,7 @@ and ['a] phpObject =
         
         method getProperty : 'a phpClass * string -> visibility * 'a
         method setProperty : 'a phpClass * string -> visibility * ('a -> unit)
+        method addProperties : 'a phpClass -> (string * visibility * 'a) list -> unit
     end
 
 exception BadType
