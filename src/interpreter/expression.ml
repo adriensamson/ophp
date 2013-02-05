@@ -118,7 +118,13 @@ let rec eval v e = match e with
     | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
     | Comparison (op, f, g) -> `Bool (compare_all op (eval v f) (eval v g))
     | FunctionCall (name, argValues) -> Registry.functions#exec name (List.map (eval v) argValues)
-    | ClassConstant (className, constantName) -> (Registry.classes#get className)#getConstant constantName
+    | ClassConstant (classRef, constantName) ->
+        let phpClass = match classRef with
+            | ClassName className -> Registry.classes#get className
+            | Self -> getSome v.callingClass
+            | Parent -> getSome (getSome v.callingClass)#parent
+            | Static -> getSome v.staticClass
+        in Object.getClassConstant phpClass constantName
     | MethodCall (obj, methodName, argValues) -> begin match eval v obj with
         | `Object o -> Object.getObjectMethod o v.callingClass methodName (List.map (eval v) argValues)
         | _ -> raise BadType

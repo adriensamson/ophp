@@ -14,7 +14,7 @@ class phpClass
     (isInterface : bool)
     (parent : phpClass option)
     (implements : phpClass list)
-    (constants : (string * Language.Typing.value) list)
+    (constantsL : (string * Language.Typing.value) list)
     (propertiesL : (string * bool * Language.Typing.visibility * Language.Typing.value) list)
     (methodsL : (string * Language.Typing.visibility * (Language.Typing.value Language.Typing.phpClass -> Language.Typing.value Language.Typing.phpObject -> Language.Typing.value list -> Language.Typing.value)) list)
     (staticMethodsL : (string * Language.Typing.visibility * (Language.Typing.value Language.Typing.phpClass -> Language.Typing.value Language.Typing.phpClass -> Language.Typing.value list -> Language.Typing.value)) list)
@@ -24,6 +24,7 @@ class phpClass
         val staticProperties = Hashtbl.create 10
         val staticMethods = Hashtbl.create 10
         val methods = Hashtbl.create 10
+        val constants = Hashtbl.create 10
         method name = name
         method abstract = isAbstract
         method static = isStatic
@@ -37,11 +38,7 @@ class phpClass
             | Some p -> p#instanceOf c
         
         method getConstant constantName =
-            let rec find l = match l with
-                | [] -> raise Not_found
-                | (name, value)::_ when name = constantName -> value
-                | _::t -> find t
-            in find constants
+            Hashtbl.find constants constantName
         
         method getStaticProperty propName =
             Hashtbl.find staticProperties propName
@@ -69,6 +66,7 @@ class phpClass
             o#addProperties (self :> phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL))
         
         initializer
+            List.iter (fun (name, value) -> Hashtbl.replace constants name value) constantsL;
             List.iter (fun (name, _, vis, value) -> Hashtbl.replace staticProperties name (vis, value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
             List.iter (fun (name, vis, f) -> Hashtbl.replace staticMethods name (vis, f (self :> phpClass))) staticMethodsL;
             List.iter (fun (name, vis, f) -> Hashtbl.replace methods name (vis, f (self :> phpClass))) methodsL
@@ -93,6 +91,11 @@ and phpObject
             List.iter (fun (name, vis, value) -> Hashtbl.replace properties (phpClass, name) (vis, value)) propertiesL
     end
 
+let rec getClassConstant phpClass name =
+    try
+        phpClass#getConstant name
+    with
+        | Not_found -> getClassConstant (tryParent phpClass#parent) name
 
 let findWithParents f (phpClass : phpClass) callingClass name =
     let isInstance = try

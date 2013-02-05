@@ -1,6 +1,8 @@
 <?php
 
 class Test {
+    const MY_CONST = 'Plop';
+
     public $test = 'test';
     public static $hello = 'hello';
     private static $truc = 'truc';
@@ -48,7 +50,7 @@ class Test2 extends Test {
     
     public static function echoTruc() {
         parent::echoTruc();
-        echo self::$truc;
+        echo self::$truc."\n";
     }
 }
 echo "Test2\n";
@@ -57,4 +59,6 @@ $obj2->hello('world');
 Test2::sayHello();
 Test2::lateHello();
 Test2::echoTruc();
+
+echo Test2::MY_CONST . "\n";
 

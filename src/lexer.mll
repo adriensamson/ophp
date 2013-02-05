@@ -187,6 +187,7 @@ and token = parse
     | "private" { T_PRIVATE }
     | "parent" { T_PARENT }
     | "self" { T_SELF }
+    | "const" { T_CONST }
     
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }

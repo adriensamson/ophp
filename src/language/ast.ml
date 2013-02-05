@@ -34,7 +34,7 @@ type expr =
     | FunctionCall of string * expr list
     | MethodCall of expr * string * expr list
     | StaticMethodCall of classReference * string * expr list
-    | ClassConstant of string * string
+    | ClassConstant of classReference * string
     | BinaryOperation of binaryOperator * expr * expr
     | Comparison of comparisonOperator * expr * expr
     | And of expr * expr
