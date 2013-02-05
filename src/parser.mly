@@ -115,9 +115,9 @@ class_def_content_list:
 
 class_def_content:
     | visibility T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, $1, None) }
-    | visibility T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, None) }
-    | visibility T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, Typing.Public, Some $4) }
-    | visibility T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, Typing.Public, Some $5) }
+    | visibility T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, $1, None) }
+    | visibility T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, $1, Some $4) }
+    | visibility T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, $1, Some $5) }
     | visibility T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.MethodDef ($3, false, $1, $5, $8) }
     | visibility T_STATIC T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.MethodDef ($4, true, $1, $6, $9) }
 
