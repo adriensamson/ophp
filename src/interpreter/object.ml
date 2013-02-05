@@ -1,6 +1,10 @@
+open Language.Typing
+
 let tryParent o = match o with
     | None -> raise Not_found
     | Some a -> a
+
+let getSome = tryParent
 
 class phpClass
     (name : string)
@@ -83,30 +87,40 @@ and phpObject
     end
 
 
-let rec getClassStaticProperty phpClass callingClass propName =
-    try
-        let (vis, value) = phpClass#getStaticProperty propName in
-        value
+let findWithParents f (phpClass : phpClass) callingClass name =
+    let isInstance = try
+        phpClass#instanceOf (getSome callingClass)
     with
-        | Not_found -> getClassStaticProperty (tryParent phpClass#parent) callingClass propName
-let rec setClassStaticProperty phpClass callingClass propName value =
+        | Not_found -> false
+    in
     try
-        let (vis, f) = phpClass#setStaticProperty propName in
-        f value
-    with
-        | Not_found -> setClassStaticProperty (tryParent phpClass#parent) callingClass propName value
-let rec getClassStaticMethod phpClass callingClass methodName =
-    try
-        let (vis, m) = phpClass#getStaticMethod methodName in
-        m
-    with
-        | Not_found -> getClassStaticMethod (tryParent phpClass#parent) callingClass methodName
-let rec getClassMethod phpClass callingClass methodName =
-    try
-        let (vis, m) = phpClass#getMethod methodName in
-        m
-    with
-        | Not_found -> getClassMethod (tryParent phpClass#parent) callingClass methodName
+        if isInstance then
+            let (vis, value) = f (getSome callingClass) name in
+            if vis = Private then value else raise Not_found
+        else raise Not_found
+    with Not_found ->
+        let rec f' c =
+            try
+                let (vis, value) = f c name in
+                match (vis, isInstance) with
+                    | Public, _
+                    | Protected, true -> value
+                    | _ -> raise Not_found
+            with
+                | Not_found -> f' (tryParent c#parent)
+        in f' phpClass
+
+let getClassStaticProperty =
+    findWithParents (fun c -> c#getStaticProperty)
+
+let setClassStaticProperty =
+    findWithParents (fun c -> c#setStaticProperty)
+
+let getClassStaticMethod =
+    findWithParents (fun c -> c#getStaticMethod)
+
+let rec getClassMethod =
+    findWithParents (fun c -> c#getMethod)
 
 let rec getObjectProperty obj callingClass propName =
     let (vis, value) = obj#getProperty (obj#objectClass, propName) in
