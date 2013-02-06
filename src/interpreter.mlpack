@@ -4,4 +4,4 @@ interpreter/PhpArray
 interpreter/Expression
 interpreter/Statement
 interpreter/Main
-
+interpreter/Object

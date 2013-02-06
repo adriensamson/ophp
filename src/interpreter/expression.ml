@@ -183,6 +183,7 @@ let rec eval v e = match e with
     | PostInc a -> let ret = eval v (Assignable a) in let _ = eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1)))) in ret
     | PreDec a -> eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1))))
     | PostDec a -> let ret = eval v (Assignable a) in let _ = eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in ret
+    | Include (filename, required, once) -> let `String f = to_string (eval v filename) in Registry.files#includeFile f required once
 and eval_assignable v a = match a with
     | Variable s -> v.vars#get s
     | VariableVariable e -> let `String s = to_string (eval v e) in v.vars#get s

@@ -188,6 +188,10 @@ and token = parse
     | "parent" { T_PARENT }
     | "self" { T_SELF }
     | "const" { T_CONST }
+    | "include" { T_INCLUDE }
+    | "include_once" { T_INCLUDE_ONCE }
+    | "require" { T_REQUIRE }
+    | "require_once" { T_REQUIRE_ONCE }
     
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }

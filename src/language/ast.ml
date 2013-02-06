@@ -49,6 +49,7 @@ type expr =
     | PostDec of assignable
     | ArrayConstructor of (expr * expr) list
     | NewObject of string * expr list
+    | Include of expr * bool * bool (* filename, required, once *)
 and assignable =
     | Variable of string
     | VariableVariable of expr
