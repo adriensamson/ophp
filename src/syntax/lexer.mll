@@ -15,6 +15,16 @@
             | r::t -> stack <- t; currentRule := r
         end
     
+    let reset () =
+        currentRule := Outer;
+        tokenBuffer := [];
+        try
+            while true do
+                braceStack#pop ()
+            done
+        with
+            | _ -> ()
+    
     let hexDecode s =
         let result = ref 0 in
         let f c = match c with

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BIN=$(dirname $0)/../src/main.byte
+BIN=$(cd $(dirname $0); pwd)/../src/main.byte
 PHP_BIN="php"
 
 function test_file {
@@ -18,7 +18,9 @@ function test_files {
     do
         if [ -d "$1" ]
         then
-            test_files $1/*
+            cd $1
+            test_files *
+            cd ..
         elif [ -f "$1" ]
         then
             test_file $1

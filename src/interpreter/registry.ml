@@ -22,6 +22,7 @@ let functions = new functionRegistry
 let classes = new classRegistry
 
 let parse chan =
+    Syntax.Lexer.reset ();
     let lexbuf = Lexing.from_channel chan in
     Syntax.Parser.everything Syntax.Lexer.parse lexbuf
 
@@ -31,10 +32,15 @@ class fileRegistry =
         val filesOnce = Hashtbl.create 10
         val mutable exec = fun (l : Language.Ast.stmt list) -> (`Null : Language.Typing.value)
         method setExec e = exec <- e
-        method includeFile filename (required : bool) once =
+        method includeFile filename required once =
             if not once || not (Hashtbl.mem filesOnce filename) then
-                self#runChannel (open_in filename)
-            else `Long 1
+                try 
+                    let result = self#runChannel (open_in filename) in
+                    if once then Hashtbl.replace filesOnce filename true;
+                    result
+                with
+                    | Sys_error _ as e -> if not required then `Bool false else raise e
+            else `Bool true
         
         method runChannel chan =
             exec (parse chan)
