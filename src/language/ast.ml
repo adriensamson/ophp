@@ -31,6 +31,7 @@ type expr =
     | ConstValue of Typing.value
     | ConcatList of expr list
     | Assignable of assignable
+    | This
     | FunctionCall of string * expr list
     | MethodCall of expr * string * expr list
     | StaticMethodCall of classReference * string * expr list

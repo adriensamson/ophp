@@ -52,10 +52,15 @@ class Test2 extends Test {
         parent::echoTruc();
         echo self::$truc."\n";
     }
+    
+    public function sayTest() {
+        echo $this->test . "\n";
+    }
 }
 echo "Test2\n";
 $obj2 = new Test2();
 $obj2->hello('world');
+$obj2->sayTest();
 Test2::sayHello();
 Test2::lateHello();
 Test2::echoTruc();

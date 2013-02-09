@@ -197,6 +197,7 @@ and token = parse
     | "private" { T_PRIVATE }
     | "parent" { T_PARENT }
     | "self" { T_SELF }
+    | "$this" { T_THIS }
     | "const" { T_CONST }
     | "include" { T_INCLUDE }
     | "include_once" { T_INCLUDE_ONCE }

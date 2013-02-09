@@ -1,0 +1,16 @@
+* namespaces
+* interfaces, abstract, final
+* class/methods modifiers order
+* autoloader
+* class magic methods
+* traversable/array access on objects
+* precompilation (put functions and classes at top)
+* print
+* do while
+* (switch)
+
+
+* implement standard extensions
+
+* TESTS
+

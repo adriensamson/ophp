@@ -99,6 +99,7 @@ let rec eval v e = match e with
     | ConstValue f -> f
     | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (eval v e) in s) l))
     | Assignable a -> eval_assignable v a
+    | This -> `Object (getSome v.obj)
     | BinaryOperation (op, f, g) -> begin match op with
         | Plus -> eval_binary (+) (+.) (eval v f) (eval v g)
         | Minus -> eval_binary (-) (-.) (eval v f) (eval v g)
