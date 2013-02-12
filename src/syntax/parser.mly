@@ -92,8 +92,14 @@ control_stmt:
     | T_BREAK T_LNUMBER TT_SEMI_COLON { Ast.Break $2 }
     | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }
     | T_CONTINUE T_LNUMBER TT_SEMI_COLON { Ast.Continue $2 }
-    | T_CLASS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE { Ast.ClassDef ($2, false, false, false, false, None, [], $4) }
-    | T_CLASS T_STRING T_EXTENDS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE { Ast.ClassDef ($2, false, false, false, false, Some $4, [], $6) }
+    | class_modifiers T_CLASS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE {
+        let (isStatic, isAbstract, isFinal) = $1 in
+        Ast.ClassDef ($3, isStatic, isAbstract, isFinal, false, None, [], $5)
+        }
+    | class_modifiers T_CLASS T_STRING T_EXTENDS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE {
+        let (isStatic, isAbstract, isFinal) = $1 in
+        Ast.ClassDef ($3, isStatic, isAbstract, isFinal, false, Some $5, [], $7)
+        }
 
 stmt:
     | control_stmt { $1 }
@@ -110,18 +116,31 @@ visibility:
     | T_PROTECTED { Typing.Protected }
     | T_PRIVATE { Typing.Private }
 
+class_modifiers:
+    | { (false, false, false) }
+    | T_STATIC { (true, false, false) }
+    | T_ABSTRACT { (false, true, false) }
+    | T_STATIC T_ABSTRACT { (true, true, false) }
+    | T_ABSTRACT T_STATIC { (true, true, false) }
+    | T_FINAL { (false, false, true) }
+    | T_FINAL T_STATIC { (true, true, false) }
+    | T_STATIC T_FINAL { (true, false, true) }
+
+class_content_modifiers:
+    | visibility { ($1, false) }
+    | visibility T_STATIC { ($1, true) }
+    | T_STATIC visibility { ($2, true) }
+
 class_def_content_list:
       { [] }
     | class_def_content class_def_content_list { $1::$2 }
 
 class_def_content:
     | T_CONST T_STRING TT_EQUAL expr TT_SEMI_COLON { Ast.ConstantDef ($2, $4) }
-    | visibility T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($2, false, $1, None) }
-    | visibility T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.PropertyDef ($3, true, $1, None) }
-    | visibility T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($2, false, $1, Some $4) }
-    | visibility T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.PropertyDef ($3, true, $1, Some $5) }
-    | visibility T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.MethodDef ($3, false, $1, $5, $8) }
-    | visibility T_STATIC T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.MethodDef ($4, true, $1, $6, $9) }
+    | class_content_modifiers T_VARIABLE TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, None) }
+    | class_content_modifiers T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, Some $4) }
+    | class_content_modifiers T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { let vis, isStatic = $1 in Ast.MethodDef ($3, isStatic, vis, $5, $8) }
+
 
 argument_definition_list:
       { [] }
