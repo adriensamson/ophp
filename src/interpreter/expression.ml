@@ -76,8 +76,13 @@ let rec compare_all op val1 val2 = match op with
             | Greater -> cc > 0
             | NotEqual | NotIdentical | Identical -> assert false
 
+class type variableRegistry = object
+    method set : string -> Language.Typing.value -> unit
+    method get : string -> Language.Typing.value
+    end
+
 type evalContext = {
-    vars : Variable.variableRegistry;
+    vars : variableRegistry;
     obj: value phpObject option;
     callingClass: value phpClass option;
     staticClass: value phpClass option
@@ -95,117 +100,126 @@ let getSome o = match o with
     | None -> assert false
     | Some a -> a
 
-let rec eval v e = match e with
-    | ConstValue f -> f
-    | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (eval v e) in s) l))
-    | Assignable a -> eval_assignable v a
-    | This -> `Object (getSome v.obj)
-    | BinaryOperation (op, f, g) -> begin match op with
-        | Plus -> eval_binary (+) (+.) (eval v f) (eval v g)
-        | Minus -> eval_binary (-) (-.) (eval v f) (eval v g)
-        | Mult -> eval_binary ( * ) ( *. ) (eval v f) (eval v g)
-        | Div -> eval_binary (/) (/.) (eval v f) (eval v g)
-        | Modulo -> eval_binary (mod) (mod_float) (eval v f) (eval v g)
-        | Concat -> let `String s1 = to_string (eval v f) and `String s2 = to_string (eval v g) in `String (s1 ^ s2)
-        | BitwiseAnd -> bitwise_operator (land) (eval v f) (eval v g)
-        | BitwiseOr -> bitwise_operator (lor) (eval v f) (eval v g)
-        | BitwiseXor -> bitwise_operator (lxor) (eval v f) (eval v g)
-        | ShiftLeft -> bitwise_operator (lsl) (eval v f) (eval v g)
-        | ShiftRight -> bitwise_operator (lsr) (eval v f) (eval v g)
-    end
-    | And (f, g) -> boolean_operator (&&) (eval v f) (eval v g)
-    | Or (f, g) -> boolean_operator (||) (eval v f) (eval v g)
-    | Xor (f, g) -> boolean_operator (!=) (eval v f) (eval v g)
-    | Not f -> let `Bool b = to_bool (eval v f) in `Bool (not b)
-    | Comparison (op, f, g) -> `Bool (compare_all op (eval v f) (eval v g))
-    | FunctionCall (name, argValues) -> Registry.functions#exec name (List.map (eval v) argValues)
-    | ClassConstant (classRef, constantName) ->
-        let phpClass = match classRef with
-            | ClassName className -> Registry.classes#get className
-            | Self -> getSome v.callingClass
-            | Parent -> getSome (getSome v.callingClass)#parent
-            | Static -> getSome v.staticClass
-        in Object.getClassConstant phpClass constantName
-    | MethodCall (obj, methodName, argValues) -> begin match eval v obj with
-        | `Object o -> Object.getObjectMethod o v.callingClass methodName (List.map (eval v) argValues)
-        | _ -> raise BadType
-    end
-    | StaticMethodCall (classRef, methodName, argValues) -> begin
-        let (phpClass, staticClass) = match classRef with
-            | ClassName className -> let c = Registry.classes#get className in (c, c)
-            | Self -> getSome v.callingClass, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
-            | Parent -> getSome (getSome v.callingClass)#parent, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
-            | Static -> getSome v.staticClass, getSome v.staticClass
-        in
-        let m = if v.obj <> None && (getSome v.obj)#objectClass#instanceOf phpClass then
-            try
-                Object.getClassMethod phpClass v.callingClass methodName (getSome v.obj)
-            with
-                | Not_found -> Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
-        else
-            Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
-        in m (List.map (eval v) argValues)
-    end
-    | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
-        let addElement (e1, e2) = match eval v e1 with
-            | `Null -> phpArray#offsetSet None (eval v e2)
-            | o -> let `String offset = to_string o in phpArray#offsetSet (Some offset) (eval v e2)
-        in
-        List.iter addElement l;
-        `Array phpArray
-    | NewObject (className, argValues) -> `Object ((Registry.classes#get className)#newObject (List.map (eval v) argValues))
-    | Assign (a, f) -> begin match a with
-        | Variable s -> let g = eval v f in v.vars#set s g; g
-        | VariableVariable e -> let `String s = to_string (eval v e) in let g = eval v f in v.vars#set s g; g
-        | ArrayOffset (e, o) ->
-            let arr = match eval v e with `Array arr -> arr | _ -> raise BadType in
-            let value = eval v f in
-            begin match o with
-                | None -> arr#offsetSet None value
-                | Some o -> let `String offset = to_string (eval v o) in arr#offsetSet (Some offset) value
-            end; value
+class evaluator
+    functionRegistry
+    classRegistry
+    fileRegistry
+    =
+    object (self)
+    method eval v e =
+        match e with
+        | ConstValue f -> f
+        | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (self#eval v e) in s) l))
+        | Assignable a -> self#eval_assignable v a
+        | This -> `Object (getSome v.obj)
+        | BinaryOperation (op, f, g) -> begin match op with
+            | Plus -> eval_binary (+) (+.) (self#eval v f) (self#eval v g)
+            | Minus -> eval_binary (-) (-.) (self#eval v f) (self#eval v g)
+            | Mult -> eval_binary ( * ) ( *. ) (self#eval v f) (self#eval v g)
+            | Div -> eval_binary (/) (/.) (self#eval v f) (self#eval v g)
+            | Modulo -> eval_binary (mod) (mod_float) (self#eval v f) (self#eval v g)
+            | Concat -> let `String s1 = to_string (self#eval v f) and `String s2 = to_string (self#eval v g) in `String (s1 ^ s2)
+            | BitwiseAnd -> bitwise_operator (land) (self#eval v f) (self#eval v g)
+            | BitwiseOr -> bitwise_operator (lor) (self#eval v f) (self#eval v g)
+            | BitwiseXor -> bitwise_operator (lxor) (self#eval v f) (self#eval v g)
+            | ShiftLeft -> bitwise_operator (lsl) (self#eval v f) (self#eval v g)
+            | ShiftRight -> bitwise_operator (lsr) (self#eval v f) (self#eval v g)
+        end
+        | And (f, g) -> boolean_operator (&&) (self#eval v f) (self#eval v g)
+        | Or (f, g) -> boolean_operator (||) (self#eval v f) (self#eval v g)
+        | Xor (f, g) -> boolean_operator (!=) (self#eval v f) (self#eval v g)
+        | Not f -> let `Bool b = to_bool (self#eval v f) in `Bool (not b)
+        | Comparison (op, f, g) -> `Bool (compare_all op (self#eval v f) (self#eval v g))
+        | FunctionCall (name, argValues) -> functionRegistry#exec name (List.map (self#eval v) argValues)
+        | ClassConstant (classRef, constantName) ->
+            let phpClass = match classRef with
+                | ClassName className -> classRegistry#get className
+                | Self -> getSome v.callingClass
+                | Parent -> getSome (getSome v.callingClass)#parent
+                | Static -> getSome v.staticClass
+            in Object.getClassConstant phpClass constantName
+        | MethodCall (obj, methodName, argValues) -> begin match self#eval v obj with
+            | `Object o -> Object.getObjectMethod o v.callingClass methodName (List.map (self#eval v) argValues)
+            | _ -> raise BadType
+        end
+        | StaticMethodCall (classRef, methodName, argValues) -> begin
+            let (phpClass, staticClass) = match classRef with
+                | ClassName className -> let c = classRegistry#get className in (c, c)
+                | Self -> getSome v.callingClass, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
+                | Parent -> getSome (getSome v.callingClass)#parent, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
+                | Static -> getSome v.staticClass, getSome v.staticClass
+            in
+            let m = if v.obj <> None && (getSome v.obj)#objectClass#instanceOf phpClass then
+                try
+                    Object.getClassMethod phpClass v.callingClass methodName (getSome v.obj)
+                with
+                    | Not_found -> Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
+            else
+                Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
+            in m (List.map (self#eval v) argValues)
+        end
+        | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
+            let addElement (e1, e2) = match self#eval v e1 with
+                | `Null -> phpArray#offsetSet None (self#eval v e2)
+                | o -> let `String offset = to_string o in phpArray#offsetSet (Some offset) (self#eval v e2)
+            in
+            List.iter addElement l;
+            `Array phpArray
+        | NewObject (className, argValues) -> `Object ((classRegistry#get className)#newObject (List.map (self#eval v) argValues))
+        | Assign (a, f) -> begin match a with
+            | Variable s -> let g = self#eval v f in v.vars#set s g; g
+            | VariableVariable e -> let `String s = to_string (self#eval v e) in let g = self#eval v f in v.vars#set s g; g
+            | ArrayOffset (e, o) ->
+                let arr = match self#eval v e with `Array arr -> arr | _ -> raise BadType in
+                let value = self#eval v f in
+                begin match o with
+                    | None -> arr#offsetSet None value
+                    | Some o -> let `String offset = to_string (self#eval v o) in arr#offsetSet (Some offset) value
+                end; value
+            | StaticProperty (classRef, propName) -> begin
+                let phpClass = match classRef with
+                    | ClassName className -> classRegistry#get className
+                    | Self -> getSome v.callingClass
+                    | Parent -> getSome (getSome v.callingClass)#parent
+                    | Static -> getSome v.staticClass
+                in
+                let value = self#eval v f in Object.setClassStaticProperty phpClass v.callingClass propName value;
+                value
+            end
+            | Property (obj, propName) -> begin match self#eval v obj with
+                | `Object o -> let value = self#eval v f in Object.setObjectProperty o v.callingClass propName value; value
+                | _ -> raise BadType
+            end
+        end
+        | BinaryAssign (op, a, f) -> self#eval v (Assign (a, BinaryOperation (op, Assignable a, f)))
+        | PreInc a -> self#eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))
+        | PostInc a -> let ret = self#eval v (Assignable a) in let _ = self#eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1)))) in ret
+        | PreDec a -> self#eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1))))
+        | PostDec a -> let ret = self#eval v (Assignable a) in let _ = self#eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in ret
+        | Include (filename, required, once) -> let `String f = to_string (self#eval v filename) in fileRegistry#includeFile f required once
+
+    method eval_assignable v a =
+        match a with
+        | Variable s -> v.vars#get s
+        | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#get s
+        | ArrayOffset (e, o) -> begin
+            match o with
+                | None -> raise MissingArrayOffset
+                | Some o -> match self#eval v e with
+                    | `Array a -> let `String offset = to_string (self#eval v o) in a#offsetGet offset
+                    | _ -> raise BadType
+        end
         | StaticProperty (classRef, propName) -> begin
             let phpClass = match classRef with
-                | ClassName className -> Registry.classes#get className
+                | ClassName className -> classRegistry#get className
                 | Self -> getSome v.callingClass
                 | Parent -> getSome (getSome v.callingClass)#parent
                 | Static -> getSome v.staticClass
             in
-            let value = eval v f in Object.setClassStaticProperty phpClass v.callingClass propName value;
-            value
+            Object.getClassStaticProperty phpClass v.callingClass propName
         end
-        | Property (obj, propName) -> begin match eval v obj with
-            | `Object o -> let value = eval v f in Object.setObjectProperty o v.callingClass propName value; value
+        | Property (obj, propName) -> begin match self#eval v obj with
+            | `Object o -> Object.getObjectProperty o v.callingClass propName
             | _ -> raise BadType
         end
     end
-    | BinaryAssign (op, a, f) -> eval v (Assign (a, BinaryOperation (op, Assignable a, f)))
-    | PreInc a -> eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))
-    | PostInc a -> let ret = eval v (Assignable a) in let _ = eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1)))) in ret
-    | PreDec a -> eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1))))
-    | PostDec a -> let ret = eval v (Assignable a) in let _ = eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in ret
-    | Include (filename, required, once) -> let `String f = to_string (eval v filename) in Registry.files#includeFile f required once
-and eval_assignable v a = match a with
-    | Variable s -> v.vars#get s
-    | VariableVariable e -> let `String s = to_string (eval v e) in v.vars#get s
-    | ArrayOffset (e, o) -> begin
-        match o with
-            | None -> raise MissingArrayOffset
-            | Some o -> match eval v e with
-                | `Array a -> let `String offset = to_string (eval v o) in a#offsetGet offset
-                | _ -> raise BadType
-    end
-    | StaticProperty (classRef, propName) -> begin
-        let phpClass = match classRef with
-            | ClassName className -> Registry.classes#get className
-            | Self -> getSome v.callingClass
-            | Parent -> getSome (getSome v.callingClass)#parent
-            | Static -> getSome v.staticClass
-        in
-        Object.getClassStaticProperty phpClass v.callingClass propName
-    end
-    | Property (obj, propName) -> begin match eval v obj with
-        | `Object o -> Object.getObjectProperty o v.callingClass propName
-        | _ -> raise BadType
-    end
-

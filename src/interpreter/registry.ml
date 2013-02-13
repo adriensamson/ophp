@@ -16,11 +16,6 @@ class classRegistry =
         method get name = Hashtbl.find classes name
     end
 
-
-let functions = new functionRegistry
-
-let classes = new classRegistry
-
 let parse chan =
     Syntax.Lexer.reset ();
     let lexbuf = Lexing.from_channel chan in
@@ -45,6 +40,4 @@ class fileRegistry =
         method runChannel chan =
             exec (parse chan)
     end
-
-let files = new fileRegistry
 
