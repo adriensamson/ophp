@@ -79,6 +79,9 @@ let rec compare_all op val1 val2 = match op with
 class type variableRegistry = object
     method set : string -> Language.Typing.value -> unit
     method get : string -> Language.Typing.value
+    method newScope : unit -> variableRegistry
+    method addFromParent : string -> unit
+    method addFromGlobal : string -> unit
     end
 
 type evalContext = {

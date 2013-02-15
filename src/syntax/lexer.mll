@@ -168,6 +168,7 @@ and token = parse
     
     | "echo" { T_ECHO }
     | "function" { T_FUNCTION }
+    | "global" { T_GLOBAL }
     | "return" { T_RETURN }
     | "null" { T_NULL }
     | "false" { T_FALSE }

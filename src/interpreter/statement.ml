@@ -25,7 +25,7 @@ class executor
         | Language.Ast.Continue i -> Continue i
         | FunctionDef (name, argNames, code) ->
             let f argValues =
-                let localVars = new Variable.variableRegistry in
+                let localVars = v.Expression.vars#newScope () in
                 List.iter2 (fun name value -> localVars#set name value) argNames argValues;
                 match self#exec_list (Expression.makeContext localVars) code with
                     | Return v -> v
@@ -43,7 +43,7 @@ class executor
                 | MethodDef (name, isStatic, visibility, argNames, code) ->
                     if isStatic then begin
                         let f inClass finalClass argValues =
-                            let localVars = new Variable.variableRegistry in
+                            let localVars = v.Expression.vars#newScope () in
                             List.iter2 (fun name value -> localVars#set name value) argNames argValues;
                             match self#exec_list (Expression.makeContext ~callingClass:inClass ~staticClass:finalClass localVars) code with
                                 | Return v -> v
@@ -52,7 +52,7 @@ class executor
                         staticMethods := (name, visibility, f)::!staticMethods
                     end else begin
                         let f inClass obj argValues =
-                            let localVars = new Variable.variableRegistry in
+                            let localVars = v.Expression.vars#newScope () in
                             List.iter2 (fun name value -> localVars#set name value) argNames argValues;
                             match self#exec_list (Expression.makeContext ~obj ~callingClass:inClass localVars) code with
                                 | Return v -> v
@@ -67,6 +67,7 @@ class executor
             let implements = List.map (classRegistry#get) implementsNames in
             classRegistry#add className (new Object.phpClass className isStatic isAbstract isFinal isInterface parent implements !constants !properties !methods !staticMethods !abstractMethods);
             NoOp
+        | Global name -> v.Expression.vars#addFromGlobal name; NoOp
         | Echo e ->
             let `String s = to_string (eval v e) in
             print_string s;
