@@ -14,13 +14,13 @@ let is_break op = match op with Break _ -> true | _ -> false
 class executor
     functionRegistry
     classRegistry
-    eval
+    evaluator
     =
     object (self)
     method exec v s =
         match s with
-        | IgnoreResult e -> let _ = eval v e in NoOp
-        | Language.Ast.Return e -> Return (eval v e)
+        | IgnoreResult e -> let _ = (evaluator self#exec_file)#eval v e in NoOp
+        | Language.Ast.Return e -> Return ((evaluator self#exec_file)#eval v e)
         | Language.Ast.Break i -> Break i
         | Language.Ast.Continue i -> Continue i
         | FunctionDef (name, argNames, code) ->
@@ -38,8 +38,8 @@ class executor
             let staticMethods = ref [] in
             let abstractMethods = ref [] in
             let f c = match c with
-                | ConstantDef (name, e) -> constants := (name, eval v e)::!constants
-                | PropertyDef (name, isStatic, visibility, init) -> let inited = match init with None -> `Null | Some i -> eval v i in properties := (name, isStatic, visibility, inited)::!properties
+                | ConstantDef (name, e) -> constants := (name, (evaluator self#exec_file)#eval v e)::!constants
+                | PropertyDef (name, isStatic, visibility, init) -> let inited = match init with None -> `Null | Some i -> (evaluator self#exec_file)#eval v i in properties := (name, isStatic, visibility, inited)::!properties
                 | MethodDef (name, isStatic, visibility, argNames, code) ->
                     if isStatic then begin
                         let f inClass finalClass argValues =
@@ -69,14 +69,14 @@ class executor
             NoOp
         | Global name -> v.Expression.vars#addFromGlobal name; NoOp
         | Echo e ->
-            let `String s = to_string (eval v e) in
+            let `String s = to_string ((evaluator self#exec_file)#eval v e) in
             print_string s;
             NoOp
-        | If (e, sl) -> let `Bool cond = to_bool (eval v e) in if cond then self#exec_list v sl else NoOp
-        | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool (eval v e) in if cond then self#exec_list v sl1 else self#exec_list v sl2
+        | If (e, sl) -> let `Bool cond = to_bool ((evaluator self#exec_file)#eval v e) in if cond then self#exec_list v sl else NoOp
+        | IfElse (e, sl1, sl2) -> let `Bool cond = to_bool ((evaluator self#exec_file)#eval v e) in if cond then self#exec_list v sl1 else self#exec_list v sl2
         | While (e, sl) -> begin
             let result = ref NoOp in
-            while not (is_break !result) && let `Bool cond = to_bool (eval v e) in cond do
+            while not (is_break !result) && let `Bool cond = to_bool ((evaluator self#exec_file)#eval v e) in cond do
                 result := self#exec_list v sl
             done;
             match !result with
@@ -90,8 +90,8 @@ class executor
             let result = ref NoOp in
             let rec eval_all es = match es with
                 | [] -> `Bool true
-                | [e] -> to_bool (eval v e)
-                | e::l -> let _ = eval v e in eval_all l
+                | [e] -> to_bool ((evaluator self#exec_file)#eval v e)
+                | e::l -> let _ = (evaluator self#exec_file)#eval v e in eval_all l
             in
             let _ = eval_all e_init in
             while not (is_break !result) && let `Bool cond = eval_all e_end in cond do
@@ -107,7 +107,7 @@ class executor
                 | Continue i -> Continue (i-1)
                 | _ -> !result
         end
-        | Foreach (e, ko, vn, sl) -> begin match eval v e with
+        | Foreach (e, ko, vn, sl) -> begin match (evaluator self#exec_file)#eval v e with
             | `Array a -> begin
                 a#rewind ();
                 let result = ref NoOp in
@@ -133,9 +133,13 @@ class executor
         end
 
     method exec_list v sl =
-    match sl with
+        match sl with
         | [] -> NoOp
         | a::t -> match self#exec v a with
             | NoOp -> self#exec_list v t
             | r -> r
+    method exec_file context l =
+        match self#exec_list context l with
+        | Return v -> v
+        | _ -> `Bool true
     end

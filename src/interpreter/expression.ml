@@ -107,6 +107,7 @@ class evaluator
     functionRegistry
     classRegistry
     fileRegistry
+    execFile
     =
     object (self)
     method eval v e =
@@ -199,7 +200,7 @@ class evaluator
         | PostInc a -> let ret = self#eval v (Assignable a) in let _ = self#eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1)))) in ret
         | PreDec a -> self#eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1))))
         | PostDec a -> let ret = self#eval v (Assignable a) in let _ = self#eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in ret
-        | Include (filename, required, once) -> let `String f = to_string (self#eval v filename) in fileRegistry#includeFile f required once
+        | Include (filename, required, once) -> let `String f = to_string (self#eval v filename) in fileRegistry#includeFile f required once (execFile v)
 
     method eval_assignable v a =
         match a with

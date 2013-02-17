@@ -16,28 +16,23 @@ class classRegistry =
         method get name = Hashtbl.find classes name
     end
 
-let parse chan =
-    Syntax.Lexer.reset ();
-    let lexbuf = Lexing.from_channel chan in
-    Syntax.Parser.everything Syntax.Lexer.parse lexbuf
 
 
-class fileRegistry =
-    object (self)
+class fileRegistry
+    parse
+    = object (self)
         val filesOnce = Hashtbl.create 10
-        val mutable exec = fun (l : Language.Ast.stmt list) -> (`Null : Language.Typing.value)
-        method setExec e = exec <- e
-        method includeFile filename required once =
+        method includeFile filename required once (exec : Language.Ast.stmt list -> Language.Typing.value) =
             if not once || not (Hashtbl.mem filesOnce filename) then
-                try 
-                    let result = self#runChannel (open_in filename) in
+                try
+                    let result = exec (self#parseChannel (open_in filename)) in
                     if once then Hashtbl.replace filesOnce filename true;
                     result
                 with
                     | Sys_error _ as e -> if not required then `Bool false else raise e
             else `Bool true
         
-        method runChannel chan =
-            exec (parse chan)
+        method parseChannel chan =
+            parse chan
     end
 
