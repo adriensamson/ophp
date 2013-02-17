@@ -1,3 +1,9 @@
+class type ['a] variable =
+    object
+    method get : 'a
+    method set : 'a -> unit
+    end
+
 class type ['a] phpArray =
     object
         method offsetExists : string -> bool

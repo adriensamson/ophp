@@ -77,8 +77,8 @@ let rec compare_all op val1 val2 = match op with
             | NotEqual | NotIdentical | Identical -> assert false
 
 class type variableRegistry = object
-    method set : string -> Language.Typing.value -> unit
-    method get : string -> Language.Typing.value
+    method replace : string -> <get : Language.Typing.value; set : Language.Typing.value -> unit > -> unit
+    method find : string -> <get : Language.Typing.value; set : Language.Typing.value -> unit >
     method newScope : unit -> variableRegistry
     method addFromParent : string -> unit
     method addFromGlobal : string -> unit
@@ -174,9 +174,15 @@ class evaluator
             | `Array arr -> `Array (arr#copy ())
             | value -> value
             in
+            let var = object
+                val mutable v = value
+                method get = v
+                method set nv = v <- nv
+                end
+            in
             begin match a with
-            | Variable s -> v.vars#set s value; value
-            | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#set s value; value
+            | Variable s -> v.vars#replace s var; var#get
+            | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#replace s var; var#get
             | ArrayOffset (e, o) ->
                 let arr = match self#eval v e with `Array arr -> arr | _ -> raise BadType in
                 begin match o with
@@ -207,8 +213,8 @@ class evaluator
 
     method eval_assignable v a =
         match a with
-        | Variable s -> v.vars#get s
-        | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#get s
+        | Variable s -> (v.vars#find s)#get
+        | VariableVariable e -> let `String s = to_string (self#eval v e) in (v.vars#find s)#get
         | ArrayOffset (e, o) -> begin
             match o with
                 | None -> raise MissingArrayOffset
