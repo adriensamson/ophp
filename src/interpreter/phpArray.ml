@@ -55,4 +55,6 @@ class phpArray =
             | Some _ -> true
         
         method count () = List.length indexList
+        
+        method copy () = ({< hashTable = Hashtbl.copy hashTable >} :> Language.Typing.value Language.Typing.phpArray)
     end

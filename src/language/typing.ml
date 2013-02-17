@@ -12,6 +12,8 @@ class type ['a] phpArray =
         method valid : unit -> bool
         
         method count : unit -> int
+        
+        method copy : unit -> 'a phpArray
     end
 
 type visibility =

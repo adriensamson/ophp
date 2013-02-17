@@ -134,7 +134,7 @@ class evaluator
         | Xor (f, g) -> boolean_operator (!=) (self#eval v f) (self#eval v g)
         | Not f -> let `Bool b = to_bool (self#eval v f) in `Bool (not b)
         | Comparison (op, f, g) -> `Bool (compare_all op (self#eval v f) (self#eval v g))
-        | FunctionCall (name, argValues) -> functionRegistry#exec name (List.map (self#eval v) argValues)
+        | FunctionCall (name, argValues) -> functionRegistry#exec name (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
         | ClassConstant (classRef, constantName) ->
             let phpClass = match classRef with
                 | ClassName className -> classRegistry#get className
@@ -143,7 +143,7 @@ class evaluator
                 | Static -> getSome v.staticClass
             in Object.getClassConstant phpClass constantName
         | MethodCall (obj, methodName, argValues) -> begin match self#eval v obj with
-            | `Object o -> Object.getObjectMethod o v.callingClass methodName (List.map (self#eval v) argValues)
+            | `Object o -> Object.getObjectMethod o v.callingClass methodName (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
             | _ -> raise BadType
         end
         | StaticMethodCall (classRef, methodName, argValues) -> begin
@@ -160,7 +160,7 @@ class evaluator
                     | Not_found -> Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
             else
                 Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
-            in m (List.map (self#eval v) argValues)
+            in m (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
         end
         | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
             let addElement (e1, e2) = match self#eval v e1 with
@@ -169,13 +169,16 @@ class evaluator
             in
             List.iter addElement l;
             `Array phpArray
-        | NewObject (className, argValues) -> `Object ((classRegistry#get className)#newObject (List.map (self#eval v) argValues))
-        | Assign (a, f) -> begin match a with
-            | Variable s -> let g = self#eval v f in v.vars#set s g; g
-            | VariableVariable e -> let `String s = to_string (self#eval v e) in let g = self#eval v f in v.vars#set s g; g
+        | NewObject (className, argValues) -> `Object ((classRegistry#get className)#newObject (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues))
+        | Assign (a, f) -> let value = match self#eval v f with
+            | `Array arr -> `Array (arr#copy ())
+            | value -> value
+            in
+            begin match a with
+            | Variable s -> v.vars#set s value; value
+            | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#set s value; value
             | ArrayOffset (e, o) ->
                 let arr = match self#eval v e with `Array arr -> arr | _ -> raise BadType in
-                let value = self#eval v f in
                 begin match o with
                     | None -> arr#offsetSet None value
                     | Some o -> let `String offset = to_string (self#eval v o) in arr#offsetSet (Some offset) value
@@ -187,11 +190,11 @@ class evaluator
                     | Parent -> getSome (getSome v.callingClass)#parent
                     | Static -> getSome v.staticClass
                 in
-                let value = self#eval v f in Object.setClassStaticProperty phpClass v.callingClass propName value;
+                Object.setClassStaticProperty phpClass v.callingClass propName value;
                 value
             end
             | Property (obj, propName) -> begin match self#eval v obj with
-                | `Object o -> let value = self#eval v f in Object.setObjectProperty o v.callingClass propName value; value
+                | `Object o -> Object.setObjectProperty o v.callingClass propName value; value
                 | _ -> raise BadType
             end
         end
