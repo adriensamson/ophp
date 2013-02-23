@@ -76,19 +76,19 @@ let rec compare_all op val1 val2 = match op with
             | Greater -> cc > 0
             | NotEqual | NotIdentical | Identical -> assert false
 
-class type variableRegistry = object
-    method replace : string -> <get : Language.Typing.value; set : Language.Typing.value -> unit > -> unit
-    method find : string -> <get : Language.Typing.value; set : Language.Typing.value -> unit >
-    method newScope : unit -> variableRegistry
+class type ['v] variableRegistry = object
+    method replace : string -> <get : 'v; set : 'v -> unit > -> unit
+    method find : string -> <get : 'v; set : 'v -> unit >
+    method newScope : unit -> 'v variableRegistry
     method addFromParent : string -> unit
     method addFromGlobal : string -> unit
     end
 
-type evalContext = {
-    vars : variableRegistry;
-    obj: value phpObject option;
-    callingClass: value phpClass option;
-    staticClass: value phpClass option
+type ('a, 'o, 'c) evalContext = {
+    vars : ('a, 'o) value variableRegistry;
+    obj: 'o option;
+    callingClass: 'c option;
+    staticClass: 'c option
 }
 
 let makeContext ?obj ?callingClass ?staticClass vars =
@@ -103,6 +103,13 @@ let getSome o = match o with
     | None -> assert false
     | Some a -> a
 
+let convertConst c = match c with
+    | `Null -> `Null
+    | `Bool b -> `Bool b
+    | `Double f -> `Double f
+    | `Long i -> `Long i
+    | `String s -> `String s
+
 class evaluator
     functionRegistry
     classRegistry
@@ -112,7 +119,7 @@ class evaluator
     object (self)
     method eval v e =
         match e with
-        | ConstValue f -> f
+        | ConstValue f -> convertConst f
         | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (self#eval v e) in s) l))
         | Assignable a -> self#eval_assignable v a
         | This -> `Object (getSome v.obj)

@@ -1,19 +1,19 @@
-class variable (value : Language.Typing.value) =
+class ['v] variable (value : 'v) =
     object
     val mutable v = value
     method get = v
     method set nv = v <- nv
     end
 
-class phpArray =
-    object (self : Language.Typing.value #Language.Typing.phpArray)
+class ['v] phpArray =
+    object (self)
         val hashTable = Hashtbl.create 10
         val mutable indexList = []
         val mutable currentIndex = None
         val mutable nextNumericOffset = 0
         method offsetExists off = Hashtbl.mem hashTable off
         method offsetGet off = (Hashtbl.find hashTable off)#get
-        method offsetSet off value =
+        method offsetSet off (value : 'v) =
             let offset = match off with
                 | Some s ->
                     if Str.string_match (Str.regexp "[0-9]+") s 0 then
@@ -76,5 +76,5 @@ class phpArray =
             Hashtbl.replace newHashTable k (new variable newVal)
         in
         Hashtbl.iter f hashTable;
-        ({< hashTable = newHashTable >} :> Language.Typing.value Language.Typing.phpArray)
+        {< hashTable = newHashTable >}
     end

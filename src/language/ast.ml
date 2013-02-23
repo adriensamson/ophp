@@ -27,53 +27,61 @@ type classReference =
     | Self
     | Static
 
+type constValues = [
+    | `Null
+    | `Bool of bool
+    | `Double of float
+    | `Long of int
+    | `String of string
+]
+
 type expr =
-    | ConstValue of Typing.value
-    | ConcatList of expr list
-    | Assignable of assignable
+    | ConstValue of constValues
+    | ConcatList of  expr list
+    | Assignable of  assignable
     | This
-    | FunctionCall of string * expr list
-    | MethodCall of expr * string * expr list
-    | StaticMethodCall of classReference * string * expr list
+    | FunctionCall of string *  expr list
+    | MethodCall of  expr * string *  expr list
+    | StaticMethodCall of classReference * string *  expr list
     | ClassConstant of classReference * string
-    | BinaryOperation of binaryOperator * expr * expr
-    | Comparison of comparisonOperator * expr * expr
-    | And of expr * expr
-    | Or of expr * expr
-    | Xor of expr * expr
-    | Not of expr
-    | Assign of assignable * expr
-    | BinaryAssign of binaryOperator * assignable * expr
-    | PreInc of assignable
-    | PostInc of assignable
-    | PreDec of assignable
-    | PostDec of assignable
-    | ArrayConstructor of (expr * expr) list
-    | NewObject of string * expr list
-    | Include of expr * bool * bool (* filename, required, once *)
-and assignable =
+    | BinaryOperation of binaryOperator *  expr *  expr
+    | Comparison of comparisonOperator *  expr *  expr
+    | And of  expr *  expr
+    | Or of  expr *  expr
+    | Xor of  expr *  expr
+    | Not of  expr
+    | Assign of  assignable *  expr
+    | BinaryAssign of binaryOperator *  assignable *  expr
+    | PreInc of  assignable
+    | PostInc of  assignable
+    | PreDec of  assignable
+    | PostDec of  assignable
+    | ArrayConstructor of ( expr *  expr) list
+    | NewObject of string *  expr list
+    | Include of  expr * bool * bool (* filename, required, once *)
+and  assignable =
     | Variable of string
-    | VariableVariable of expr
-    | ArrayOffset of expr * expr option
-    | Property of expr * string
+    | VariableVariable of  expr
+    | ArrayOffset of  expr *  expr option
+    | Property of  expr * string
     | StaticProperty of classReference * string
 
-type stmt =
+type  stmt =
     | Global of string
-    | Echo of expr
-    | Return of expr
-    | IgnoreResult of expr
-    | FunctionDef of string * string list * stmt list
-    | ClassDef of string * bool * bool * bool * bool * string option * string list * classDefElement list (* name, isStatic, isAbstract, isFinal, isInterface, parent, implements, content *)
-    | If of expr * stmt list
-    | IfElse of expr * stmt list * stmt list
-    | While of expr * stmt list
-    | For of expr list * expr list * expr list * stmt list
-    | Foreach of expr * string option * string * stmt list
+    | Echo of  expr
+    | Return of  expr
+    | IgnoreResult of  expr
+    | FunctionDef of string * string list *  stmt list
+    | ClassDef of string * bool * bool * bool * bool * string option * string list *  classDefElement list (* name, isStatic, isAbstract, isFinal, isInterface, parent, implements, content *)
+    | If of  expr *  stmt list
+    | IfElse of  expr *  stmt list *  stmt list
+    | While of  expr *  stmt list
+    | For of  expr list *  expr list *  expr list *  stmt list
+    | Foreach of  expr * string option * string *  stmt list
     | Break of int
     | Continue of int
-and classDefElement =
-    | ConstantDef of string * expr
-    | PropertyDef of string * bool * Typing.visibility * expr option
-    | MethodDef of string * bool * Typing.visibility * string list * stmt list
+and  classDefElement =
+    | ConstantDef of string *  expr
+    | PropertyDef of string * bool * Typing.visibility *  expr option
+    | MethodDef of string * bool * Typing.visibility * string list *  stmt list
     | AbstractMethodDef of string * bool * Typing.visibility * string list

@@ -1,13 +1,13 @@
-class variable =
+class ['v] variable =
     object (self)
     val mutable v = None
     method get = match v with
         | None -> raise Not_found
         | Some value -> value
-    method set (nv : Language.Typing.value) = v <- Some nv
+    method set (nv : 'v) = v <- Some nv
     end
 
-class variableRegistry =
+class ['v] variableRegistry =
     object (self)
         val globalScope = None
         val parentScope = None
@@ -20,7 +20,7 @@ class variableRegistry =
                 let v = new variable in
                 Hashtbl.replace variables name v;
                 v
-        method replace name (var : variable) = Hashtbl.replace variables name var
+        method replace name (var : 'v variable) = Hashtbl.replace variables name var
         method newScope () =
             {< globalScope = if globalScope = None then Some self else globalScope;
             parentScope = Some self;

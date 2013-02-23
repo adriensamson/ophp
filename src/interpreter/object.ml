@@ -6,20 +6,20 @@ let tryParent o = match o with
 
 let getSome = tryParent
 
-class phpClass
+class ['v] phpClass
     (name : string)
     (isStatic : bool)
     (isAbstract : bool)
     (isFinal : bool)
     (isInterface : bool)
-    (parent : phpClass option)
-    (implements : phpClass list)
-    (constantsL : (string * Language.Typing.value) list)
-    (propertiesL : (string * bool * Language.Typing.visibility * Language.Typing.value) list)
-    (methodsL : (string * Language.Typing.visibility * (Language.Typing.value Language.Typing.phpClass -> Language.Typing.value Language.Typing.phpObject -> Language.Typing.value list -> Language.Typing.value)) list)
-    (staticMethodsL : (string * Language.Typing.visibility * (Language.Typing.value Language.Typing.phpClass -> Language.Typing.value Language.Typing.phpClass -> Language.Typing.value list -> Language.Typing.value)) list)
+    (parent : 'v phpClass option)
+    (implements : 'v phpClass list)
+    (constantsL : (string * 'v) list)
+    (propertiesL : (string * bool * Language.Typing.visibility * 'v) list)
+    (methodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpObject -> 'v list -> 'v)) list)
+    (staticMethodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpClass -> 'v list -> 'v)) list)
     (abstractMethods : (string * bool * Language.Typing.visibility * string list) list)
-    = object (self : Language.Typing.value #Language.Typing.phpClass)
+    = object (self)
     
         val staticProperties = Hashtbl.create 10
         val staticMethods = Hashtbl.create 10
@@ -33,7 +33,7 @@ class phpClass
         method parent = parent
         method implements = implements
         
-        method instanceOf c = if c = (self :> phpClass) then true else match parent with
+        method instanceOf c = if c = (self :> 'v phpClass) then true else match parent with
             | None -> false
             | Some p -> p#instanceOf c
         
@@ -53,8 +53,8 @@ class phpClass
         method getMethod methodName =
             Hashtbl.find methods methodName
         
-        method newObject l =
-            let o = new phpObject (self :> phpClass) in
+        method newObject (l : 'v list) =
+            let o = new phpObject (self :> 'v phpClass) in
             self#initObject o;
             o
         method initObject o =
@@ -63,19 +63,19 @@ class phpClass
                     | None -> ()
                     | Some c -> c#initObject o
             end;
-            o#addProperties (self :> phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL))
+            o#addProperties (self :> 'v phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL))
         
         initializer
             List.iter (fun (name, value) -> Hashtbl.replace constants name value) constantsL;
             List.iter (fun (name, _, vis, value) -> Hashtbl.replace staticProperties name (vis, value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
-            List.iter (fun (name, vis, f) -> Hashtbl.replace staticMethods name (vis, f (self :> phpClass))) staticMethodsL;
-            List.iter (fun (name, vis, f) -> Hashtbl.replace methods name (vis, f (self :> phpClass))) methodsL
+            List.iter (fun (name, vis, f) -> Hashtbl.replace staticMethods name (vis, f (self :> 'v phpClass))) staticMethodsL;
+            List.iter (fun (name, vis, f) -> Hashtbl.replace methods name (vis, f (self :> 'v phpClass))) methodsL
             
     end
 
-and phpObject
+and ['v] phpObject
     objectClass
-    = object (self : Language.Typing.value #Language.Typing.phpObject)
+    = object (self)
         val properties = Hashtbl.create 10;
         
         method objectClass = objectClass
@@ -97,7 +97,7 @@ let rec getClassConstant phpClass name =
     with
         | Not_found -> getClassConstant (tryParent phpClass#parent) name
 
-let findWithParents f (phpClass : phpClass) callingClass name =
+let findWithParents f (phpClass : 'v phpClass) callingClass name =
     let isInstance = try
         phpClass#instanceOf (getSome callingClass)
     with
@@ -120,17 +120,17 @@ let findWithParents f (phpClass : phpClass) callingClass name =
                 | Not_found -> f' (tryParent c#parent)
         in f' phpClass
 
-let getClassStaticProperty =
-    findWithParents (fun c -> c#getStaticProperty)
+let getClassStaticProperty c =
+    findWithParents (fun c -> c#getStaticProperty) c
 
-let setClassStaticProperty =
-    findWithParents (fun c -> c#setStaticProperty)
+let setClassStaticProperty c =
+    findWithParents (fun c -> c#setStaticProperty) c
 
-let getClassStaticMethod =
-    findWithParents (fun c -> c#getStaticMethod)
+let getClassStaticMethod c =
+    findWithParents (fun c -> c#getStaticMethod) c
 
-let getClassMethod =
-    findWithParents (fun c -> c#getMethod)
+let getClassMethod c =
+    findWithParents (fun c -> c#getMethod) c
 
 let getObjectProperty obj =
     findWithParents (fun c name -> obj#getProperty (c, name)) obj#objectClass

@@ -1,86 +1,28 @@
-class type ['a] variable =
-    object
-    method get : 'a
-    method set : 'a -> unit
-    end
-
-class type ['a] phpArray =
-    object
-        method offsetExists : string -> bool
-        method offsetGet : string -> 'a
-        method offsetSet : string option -> 'a -> unit
-        method offsetVar : string -> 'a variable
-        method offsetUnset : string -> unit
-        
-        method current : unit -> 'a
-        method key : unit -> string
-        method next : unit -> unit
-        method rewind : unit -> unit
-        method valid : unit -> bool
-        
-        method count : unit -> int
-        
-        method copy : unit -> 'a phpArray
-    end
-
 type visibility =
     | Public
     | Protected
     | Private
 
-class type ['a] phpClass =
-    object
-        method name : string
-        method abstract : bool
-        method static : bool
-        method final : bool
-        method interface : bool
-        method parent : 'a phpClass option
-        method implements : 'a phpClass list
-        
-        method instanceOf : 'a phpClass -> bool
-        
-        method getConstant : string -> 'a
-        
-        method getStaticProperty : string -> visibility * 'a
-        method setStaticProperty : string -> visibility * ('a -> unit)
-        
-        method getStaticMethod : string -> visibility * ('a phpClass -> 'a list -> 'a)
-        method getMethod : string -> visibility * ('a phpObject -> 'a list -> 'a)
-        
-        method newObject : 'a list -> 'a phpObject
-        method initObject : 'a phpObject -> unit
-    end
-
-and ['a] phpObject =
-    object
-        method objectClass : 'a phpClass
-        
-        method getProperty : 'a phpClass * string -> visibility * 'a
-        method setProperty : 'a phpClass * string -> visibility * ('a -> unit)
-        method addProperties : 'a phpClass -> (string * visibility * 'a) list -> unit
-    end
-
 exception BadType
 exception BadVisibility
 
-type value = [
+type ('a, 'o) value = [
     | `Null
     | `Bool of bool
     | `Double of float
     | `Long of int
     | `String of string
-    | `Array of value phpArray
-    | `Object of value phpObject
+    | `Array of 'a
+    | `Object of 'o
 ]
 
-let is_numeric strict (v:value) = match v with
+let is_numeric strict (v : (_, _) value) = match v with
     | `Null | `Bool _ -> not strict
     | `Double _ | `Long _ -> true
     | `Array _ | `Object _ -> false
     | `String s -> let r = Str.regexp "^[-+]?\\([0-9]+|[0-9]+\\.[0-9]*|\\.[0-9]+\\)$" in Str.string_match r s 0
 
-let to_numeric (v:value) = match v with
+let to_numeric (v : (_, _) value) = match v with
     | `Null -> `Long 0
     | `Bool true -> `Long 1
     | `Bool false -> `Long 0
@@ -97,7 +39,7 @@ let to_numeric (v:value) = match v with
             `Long 0
     | `Array _ | `Object _ -> raise BadType
 
-let to_string (v:value) = match v with
+let to_string (v : (_, _) value) = match v with
     | `Null -> `String ""
     | `Bool false -> `String ""
     | `Bool true -> `String "1"
@@ -111,7 +53,7 @@ let to_string (v:value) = match v with
     | `String s -> `String s
     | `Array _ | `Object _ -> raise BadType
 
-let to_bool (v:value) = match v with
+let to_bool (v : (_, _) value) = match v with
     | `Null -> `Bool false
     | `Bool b -> `Bool b
     | `Double d -> `Bool (d <> 0.)
@@ -119,7 +61,7 @@ let to_bool (v:value) = match v with
     | `String s -> `Bool (not (s = "" || s = "0"))
     | `Array _ | `Object _ -> raise BadType
 
-let to_long (v:value) = match v with
+let to_long (v : (_, _) value) = match v with
     | `Null -> `Long 0
     | `Bool true -> `Long 1
     | `Bool false -> `Long 0

@@ -3,9 +3,9 @@ open Language.Ast
 
 exception NotTraversable
 
-type exec_return =
+type 'v exec_return =
     | NoOp
-    | Return of value
+    | Return of 'v
     | Break of int
     | Continue of int
 
@@ -17,7 +17,7 @@ class executor
     evaluator
     =
     object (self)
-    method exec v s =
+    method exec (v : ('v PhpArray.phpArray, 'v Object.phpObject, 'v Object.phpClass) Expression.evalContext) (s : stmt) =
         match s with
         | IgnoreResult e -> let _ = (evaluator self#exec_file)#eval v e in NoOp
         | Language.Ast.Return e -> Return ((evaluator self#exec_file)#eval v e)
