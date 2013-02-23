@@ -1,3 +1,10 @@
+class variable (value : Language.Typing.value) =
+    object
+    val mutable v = value
+    method get = v
+    method set nv = v <- nv
+    end
+
 class phpArray =
     object (self : Language.Typing.value #Language.Typing.phpArray)
         val hashTable = Hashtbl.create 10
@@ -5,7 +12,7 @@ class phpArray =
         val mutable currentIndex = None
         val mutable nextNumericOffset = 0
         method offsetExists off = Hashtbl.mem hashTable off
-        method offsetGet off = Hashtbl.find hashTable off
+        method offsetGet off = (Hashtbl.find hashTable off)#get
         method offsetSet off value =
             let offset = match off with
                 | Some s ->
@@ -22,7 +29,10 @@ class phpArray =
             if not (List.mem offset indexList) then
                 indexList <- indexList @ [offset]
             else ();
-            Hashtbl.replace hashTable offset value
+            let var = new variable value
+            in
+            Hashtbl.replace hashTable offset var
+        method offsetVar off = Hashtbl.find hashTable off
         method offsetUnset off =
             let rec list_remove l e = match l with
                 | [] -> []
@@ -34,7 +44,7 @@ class phpArray =
         
         method current () = match currentIndex with
             | None -> raise Not_found
-            | Some k -> Hashtbl.find hashTable k
+            | Some k -> (Hashtbl.find hashTable k)#get
         method key () = match currentIndex with
             | None -> raise Not_found
             | Some k -> k
@@ -56,5 +66,15 @@ class phpArray =
         
         method count () = List.length indexList
         
-        method copy () = ({< hashTable = Hashtbl.copy hashTable >} :> Language.Typing.value Language.Typing.phpArray)
+        method copy () =
+        let newHashTable = Hashtbl.create 10 in
+        let f k v =
+            let newVal = match v#get with
+            | `Array arr -> `Array (arr#copy ())
+            | nv -> nv
+            in
+            Hashtbl.replace newHashTable k (new variable newVal)
+        in
+        Hashtbl.iter f hashTable;
+        ({< hashTable = newHashTable >} :> Language.Typing.value Language.Typing.phpArray)
     end

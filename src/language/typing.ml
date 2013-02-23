@@ -9,6 +9,7 @@ class type ['a] phpArray =
         method offsetExists : string -> bool
         method offsetGet : string -> 'a
         method offsetSet : string option -> 'a -> unit
+        method offsetVar : string -> 'a variable
         method offsetUnset : string -> unit
         
         method current : unit -> 'a
