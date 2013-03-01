@@ -51,6 +51,7 @@ type expr =
     | Xor of  expr *  expr
     | Not of  expr
     | Assign of  assignable *  expr
+    | AssignByRef of assignable * assignable
     | BinaryAssign of binaryOperator *  assignable *  expr
     | PreInc of  assignable
     | PostInc of  assignable

@@ -226,6 +226,7 @@ expr:
     | expr T_IS_NOT_IDENTICAL expr { Ast.Comparison (Ast.NotIdentical, $1, $3) }
     
     | assignable TT_EQUAL expr { Ast.Assign ($1, $3) }
+    | assignable TT_EQUAL TT_BITWISE_AND assignable { Ast.AssignByRef ($1, $4) }
     | assignable T_PLUS_EQUAL expr { Ast.BinaryAssign (Ast.Plus, $1, $3) }
     | assignable T_MINUS_EQUAL expr { Ast.BinaryAssign (Ast.Minus, $1, $3) }
     | assignable T_MUL_EQUAL expr { Ast.BinaryAssign (Ast.Mult, $1, $3) }

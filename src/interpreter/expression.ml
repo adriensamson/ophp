@@ -181,36 +181,23 @@ class evaluator
             | `Array arr -> `Array (arr#copy ())
             | value -> value
             in
-            let var = object
-                val mutable v = value
-                method get = v
-                method set nv = v <- nv
-                end
-            in
-            begin match a with
-            | Variable s -> v.vars#replace s var; var#get
-            | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#replace s var; var#get
-            | ArrayOffset (e, o) ->
-                let arr = match self#eval v e with `Array arr -> arr | _ -> raise BadType in
-                begin match o with
-                    | None -> arr#offsetSet None value
-                    | Some o -> let `String offset = to_string (self#eval v o) in arr#offsetSet (Some offset) value
-                end; value
-            | StaticProperty (classRef, propName) -> begin
-                let phpClass = match classRef with
-                    | ClassName className -> classRegistry#get className
-                    | Self -> getSome v.callingClass
-                    | Parent -> getSome (getSome v.callingClass)#parent
-                    | Static -> getSome v.staticClass
-                in
-                Object.setClassStaticProperty phpClass v.callingClass propName value;
-                value
-            end
-            | Property (obj, propName) -> begin match self#eval v obj with
-                | `Object o -> Object.setObjectProperty o v.callingClass propName value; value
-                | _ -> raise BadType
-            end
-        end
+            begin try
+                let var = self#eval_assignable_var v a in
+                var#set value
+            with
+            | Not_found ->
+                let var = object
+                    val mutable v = value
+                    method get = v
+                    method set nv = v <- nv
+                    end
+                in self#assign_var v a var
+            end;
+            value
+        | AssignByRef (a, b) ->
+            let var = self#eval_assignable_var v b in
+            self#assign_var v a var;
+            var#get
         | BinaryAssign (op, a, f) -> self#eval v (Assign (a, BinaryOperation (op, Assignable a, f)))
         | PreInc a -> self#eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))
         | PostInc a -> let ret = self#eval v (Assignable a) in let _ = self#eval v (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1)))) in ret
@@ -218,15 +205,40 @@ class evaluator
         | PostDec a -> let ret = self#eval v (Assignable a) in let _ = self#eval v (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in ret
         | Include (filename, required, once) -> let `String f = to_string (self#eval v filename) in fileRegistry#includeFile f required once (execFile v)
 
-    method eval_assignable v a =
+    method private assign_var v a var =
         match a with
-        | Variable s -> (v.vars#find s)#get
-        | VariableVariable e -> let `String s = to_string (self#eval v e) in (v.vars#find s)#get
+        | Variable s -> v.vars#replace s var
+        | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#replace s var
+        | ArrayOffset (e, o) ->
+            let arr = match self#eval v e with `Array arr -> arr | _ -> raise BadType in
+            begin match o with
+                | None -> arr#offsetVarSet (arr#nextOffset) var
+                | Some o -> let `String offset = to_string (self#eval v o) in arr#offsetVarSet offset var
+            end
+        | StaticProperty (classRef, propName) -> begin
+            let phpClass = match classRef with
+                | ClassName className -> classRegistry#get className
+                | Self -> getSome v.callingClass
+                | Parent -> getSome (getSome v.callingClass)#parent
+                | Static -> getSome v.staticClass
+            in
+            Object.setClassStaticPropertyVar phpClass v.callingClass propName var
+            end
+        | Property (obj, propName) -> begin match self#eval v obj with
+            | `Object o -> Object.setObjectPropertyVar o v.callingClass propName var
+            | _ -> raise BadType
+        end
+    method eval_assignable v a = (self#eval_assignable_var v a)#get
+        
+    method private eval_assignable_var v a =
+        match a with
+        | Variable s -> v.vars#find s
+        | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#find s
         | ArrayOffset (e, o) -> begin
             match o with
                 | None -> raise MissingArrayOffset
                 | Some o -> match self#eval v e with
-                    | `Array a -> let `String offset = to_string (self#eval v o) in a#offsetGet offset
+                    | `Array a -> let `String offset = to_string (self#eval v o) in a#offsetVar offset
                     | _ -> raise BadType
         end
         | StaticProperty (classRef, propName) -> begin
@@ -236,10 +248,10 @@ class evaluator
                 | Parent -> getSome (getSome v.callingClass)#parent
                 | Static -> getSome v.staticClass
             in
-            Object.getClassStaticProperty phpClass v.callingClass propName
+            Object.getClassStaticPropertyVar phpClass v.callingClass propName
         end
         | Property (obj, propName) -> begin match self#eval v obj with
-            | `Object o -> Object.getObjectProperty o v.callingClass propName
+            | `Object o -> Object.getObjectPropertyVar o v.callingClass propName
             | _ -> raise BadType
         end
     end

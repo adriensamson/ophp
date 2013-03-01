@@ -16,15 +16,10 @@ class ['v] phpArray =
         method offsetSet off (value : 'v) =
             let offset = match off with
                 | Some s ->
-                    if Str.string_match (Str.regexp "[0-9]+") s 0 then
-                        let i = int_of_string (Str.matched_string s) in
-                        nextNumericOffset <- max nextNumericOffset (i+1)
-                    else ();
+                    self#registerOffset s;
                     s
                 | None ->
-                    let s = string_of_int nextNumericOffset in
-                    nextNumericOffset <- nextNumericOffset + 1;
-                    s
+                    self#nextOffset
             in
             if not (List.mem offset indexList) then
                 indexList <- indexList @ [offset]
@@ -33,6 +28,7 @@ class ['v] phpArray =
             in
             Hashtbl.replace hashTable offset var
         method offsetVar off = Hashtbl.find hashTable off
+        method offsetVarSet off v = self#registerOffset off; Hashtbl.replace hashTable off v
         method offsetUnset off =
             let rec list_remove l e = match l with
                 | [] -> []
@@ -41,6 +37,15 @@ class ['v] phpArray =
             in
             indexList <- list_remove indexList off;
             Hashtbl.remove hashTable off
+        
+        method private registerOffset s =
+            if Str.string_match (Str.regexp "[0-9]+") s 0 then
+            let i = int_of_string (Str.matched_string s) in
+            nextNumericOffset <- max nextNumericOffset (i+1)
+        method nextOffset =
+            let s = string_of_int nextNumericOffset in
+            nextNumericOffset <- nextNumericOffset + 1;
+            s
         
         method current () = match currentIndex with
             | None -> raise Not_found
