@@ -139,7 +139,17 @@ class executor
             | NoOp -> self#exec_list v t
             | r -> r
     method exec_file context l =
-        match self#exec_list context l with
+        match self#exec_namespace_list context l with
         | Return v -> v
         | _ -> `Bool true
+    method exec_namespace context n =
+        match n with
+        | NamespaceBlock (nname, uses, l) -> self#exec_list context l
+    method exec_namespace_list v nl =
+        match nl with
+        | [] -> NoOp
+        | a::t -> match self#exec_namespace v a with
+            | NoOp -> self#exec_namespace_list v t
+            | r -> r
     end
+

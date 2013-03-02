@@ -134,6 +134,7 @@ and token = parse
     | '&' { TT_BITWISE_AND }
     | '>' { TT_GREATER }
     | '<' { TT_SMALLER }
+    | '\\' { TT_BACKSLASH }
     
     | "++" { T_INC }
     | "--" { T_DEC }
@@ -204,6 +205,8 @@ and token = parse
     | "include_once" { T_INCLUDE_ONCE }
     | "require" { T_REQUIRE }
     | "require_once" { T_REQUIRE_ONCE }
+    | "namespace" { T_NAMESPACE }
+    | "use" { T_USE }
     
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }

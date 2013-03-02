@@ -1,5 +1,6 @@
 * namespaces
 * interfaces, abstract, final
+* trait
 * autoloader
 * class magic methods
 * traversable/array access on objects

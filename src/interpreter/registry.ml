@@ -22,7 +22,7 @@ class ['v] fileRegistry
     parse
     = object (self)
         val filesOnce = Hashtbl.create 10
-        method includeFile filename required once (exec : Language.Ast.stmt list -> 'v) =
+        method includeFile filename required once (exec : Language.Ast.namespaceStmt list -> 'v) =
             if not once || not (Hashtbl.mem filesOnce filename) then
                 try
                     let result = exec (self#parseChannel (open_in filename)) in

@@ -87,3 +87,7 @@ and  classDefElement =
     | PropertyDef of string * bool * Typing.visibility *  expr option
     | MethodDef of string * bool * Typing.visibility * string list *  stmt list
     | AbstractMethodDef of string * bool * Typing.visibility * string list
+
+type namespaceStmt =
+    | NamespaceBlock of string list * (string list * string option) list * stmt list
+
