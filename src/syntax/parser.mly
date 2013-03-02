@@ -40,6 +40,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 %left T_SL T_SR
 %left TT_PLUS TT_MINUS TT_CONCAT
 %left TT_MUL TT_DIV TT_MOD
+%nonassoc UNARY_MINUS
 %right TT_EXCL
 %nonassoc T_INSTANCEOF
 %right TT_TILDE T_INC T_DEC T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST TT_AT
@@ -196,7 +197,7 @@ expr:
     | T_TRUE { Ast.ConstValue (`Bool true) }
     | TT_CONSTANT_STRING { Ast.ConstValue (`String $1) }
     | TT_DOUBLE_QUOTE double_quoted_content_list TT_DOUBLE_QUOTE { Ast.ConcatList $2 }
-    
+    | TT_MINUS expr %prec UNARY_MINUS { Ast.UnaryMinus $2 }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
     
     | expr TT_PLUS expr { Ast.BinaryOperation(Ast.Plus, $1, $3) }

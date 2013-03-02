@@ -45,6 +45,7 @@ type expr =
     | StaticMethodCall of classReference * string *  expr list
     | ClassConstant of classReference * string
     | BinaryOperation of binaryOperator *  expr *  expr
+    | UnaryMinus of expr
     | Comparison of comparisonOperator *  expr *  expr
     | And of  expr *  expr
     | Or of  expr *  expr

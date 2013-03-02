@@ -48,7 +48,7 @@ let to_string (v : (_, _) value) = match v with
         if float_of_int i = d then
             `String (string_of_int i)
         else
-            `String (string_of_float d)
+            `String (Printf.sprintf "%.14g" d)
     | `Long l -> `String (string_of_int l)
     | `String s -> `String s
     | `Array _ | `Object _ -> raise BadType

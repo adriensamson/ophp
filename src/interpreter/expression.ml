@@ -9,6 +9,17 @@ let eval_binary opLong opDouble val1 val2 = match (to_numeric val1, to_numeric v
     | (`Double a, `Long b) -> `Double (opDouble a (float_of_int b))
     | (`Double a, `Double b) -> `Double (opDouble a b)
 
+let eval_div val1 val2 = let f = match (to_numeric val1, to_numeric val2) with
+    | (`Long a, `Long b) -> float_of_int a /. float_of_int b
+    | (`Long a, `Double b) -> float_of_int a /. b
+    | (`Double a, `Long b) -> a /. float_of_int b
+    | (`Double a, `Double b) -> a /. b
+    in
+    if float_of_int (int_of_float f) = f then
+        `Long (int_of_float f)
+    else
+        `Double f
+
 let boolean_operator op val1 val2 =
     let `Bool b1 = to_bool val1
     and `Bool b2 = to_bool val2 in
@@ -127,7 +138,7 @@ class evaluator
             | Plus -> eval_binary (+) (+.) (self#eval v f) (self#eval v g)
             | Minus -> eval_binary (-) (-.) (self#eval v f) (self#eval v g)
             | Mult -> eval_binary ( * ) ( *. ) (self#eval v f) (self#eval v g)
-            | Div -> eval_binary (/) (/.) (self#eval v f) (self#eval v g)
+            | Div -> eval_div (self#eval v f) (self#eval v g)
             | Modulo -> eval_binary (mod) (mod_float) (self#eval v f) (self#eval v g)
             | Concat -> let `String s1 = to_string (self#eval v f) and `String s2 = to_string (self#eval v g) in `String (s1 ^ s2)
             | BitwiseAnd -> bitwise_operator (land) (self#eval v f) (self#eval v g)
@@ -136,6 +147,7 @@ class evaluator
             | ShiftLeft -> bitwise_operator (lsl) (self#eval v f) (self#eval v g)
             | ShiftRight -> bitwise_operator (lsr) (self#eval v f) (self#eval v g)
         end
+        | UnaryMinus f -> eval_binary (-) (-.) (`Long 0) (self#eval v f)
         | And (f, g) -> boolean_operator (&&) (self#eval v f) (self#eval v g)
         | Or (f, g) -> boolean_operator (||) (self#eval v f) (self#eval v g)
         | Xor (f, g) -> boolean_operator (!=) (self#eval v f) (self#eval v g)

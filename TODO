@@ -8,9 +8,8 @@
 * do while
 * (switch)
 * alternative syntax if () : endif
-* assign, pass, return by reference
+* pass, return by reference
 * exceptions / errors
-* unary minus
 
 * implement standard extensions
 
