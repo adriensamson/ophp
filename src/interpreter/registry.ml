@@ -6,6 +6,7 @@ class ['v] functionRegistry =
         method exec name argValues =
             let f = Hashtbl.find functions name in
             f argValues
+        method has name = Hashtbl.mem functions name
     end
 
 class ['c] classRegistry =

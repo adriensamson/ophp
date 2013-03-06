@@ -55,6 +55,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 everything:
     | stmt_list END { [Ast.NamespaceBlock ([], [], $1)] }
     | namespace_blocks END { $1 }
+    | namespace_blocks2 END { $1 }
 
 namespace_blocks:
     | namespace_block { [$1] }
@@ -63,9 +64,21 @@ namespace_blocks:
 namespace_block:
     | T_NAMESPACE namespace_name TT_SEMI_COLON use_namespace_list stmt_list { Ast.NamespaceBlock ($2, $4, $5) }
 
+namespace_blocks2:
+    | namespace_block2 { [$1] }
+    | namespace_block2 namespace_blocks2 { $1::$2 }
+
+namespace_block2:
+    | T_NAMESPACE namespace_name TT_LEFT_BRACE use_namespace_list stmt_list TT_RIGHT_BRACE { Ast.NamespaceBlock ($2, $4, $5) }
+
+
 namespace_name:
     | { [] }
-    | T_STRING TT_BACKSLASH namespace_name { $1::$3 }
+    | namespace_parts { $1 }
+
+namespace_parts:
+    | T_STRING { [$1] }
+    | T_STRING TT_BACKSLASH namespace_parts { $1::$3 }
 
 use_namespace_list:
     | { [] }
@@ -73,6 +86,10 @@ use_namespace_list:
 use_namespace:
     | T_USE namespace_name TT_SEMI_COLON { ($2, None) }
     | T_USE namespace_name T_AS T_STRING TT_SEMI_COLON { ($2, Some $4) }
+
+namespaced_identifier:
+    | namespace_parts { match List.rev $1 with [] -> assert false | name::parts -> Ast.RelativeName (List.rev parts, name) }
+    | TT_BACKSLASH namespace_parts { match List.rev $2 with [] -> assert false | name::parts ->  Ast.FullyQualifiedName (List.rev parts, name) }
 
 stmt_list:
       { [] }
@@ -264,9 +281,9 @@ expr:
     | T_DEC assignable { Ast.PreDec $2 }
     | assignable T_DEC { Ast.PostDec $1 }
     
-    | T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
+    | namespaced_identifier TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
-    | T_NEW T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
+    | T_NEW namespaced_identifier TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
     | class_reference T_DOUBLE_COLON T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.StaticMethodCall ($1, $3, $5) }
     | class_reference T_DOUBLE_COLON T_STRING { Ast.ClassConstant ($1, $3) }
     
@@ -278,7 +295,7 @@ expr:
     | fluent { $1 }
     
 class_reference:
-    | T_STRING { Ast.ClassName $1 }
+    | namespaced_identifier { Ast.ClassName $1 }
     | T_SELF { Ast.Self }
     | T_STATIC { Ast.Static }
     | T_PARENT { Ast.Parent }

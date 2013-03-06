@@ -17,7 +17,7 @@ class executor
     evaluator
     =
     object (self)
-    method exec (v : ('v PhpArray.phpArray, 'v Object.phpObject, 'v Object.phpClass) Expression.evalContext) (s : stmt) =
+    method exec (v : ('v PhpArray.phpArray, 'v Object.phpObject, 'v Object.phpClass) Expression.evalContext as 'e) (s : stmt) =
         match s with
         | IgnoreResult e -> let _ = (evaluator self#exec_file)#eval v e in NoOp
         | Language.Ast.Return e -> Return ((evaluator self#exec_file)#eval v e)
@@ -25,13 +25,14 @@ class executor
         | Language.Ast.Continue i -> Continue i
         | FunctionDef (name, argNames, code) ->
             let f argValues =
-                let localVars = v.Expression.vars#newScope () in
+                let localVars = v#vars#newScope () in
                 List.iter2 (fun name value -> (localVars#find name)#set value) argNames argValues;
                 match self#exec_list (Expression.makeContext localVars) code with
                     | Return v -> v
                     | _ -> `Null
             in functionRegistry#add name f; NoOp
         | ClassDef (className, isStatic, isAbstract, isFinal, isInterface, parentName, implementsNames, contents) ->
+            let className = String.concat "\\" (v#namespace @ [className]) in
             let constants = ref [] in
             let properties = ref [] in
             let methods = ref [] in
@@ -43,7 +44,7 @@ class executor
                 | MethodDef (name, isStatic, visibility, argNames, code) ->
                     if isStatic then begin
                         let f inClass finalClass argValues =
-                            let localVars = v.Expression.vars#newScope () in
+                            let localVars = v#vars#newScope () in
                             List.iter2 (fun name value -> (localVars#find name)#set value) argNames argValues;
                             match self#exec_list (Expression.makeContext ~callingClass:inClass ~staticClass:finalClass localVars) code with
                                 | Return v -> v
@@ -52,7 +53,7 @@ class executor
                         staticMethods := (name, visibility, f)::!staticMethods
                     end else begin
                         let f inClass obj argValues =
-                            let localVars = v.Expression.vars#newScope () in
+                            let localVars = v#vars#newScope () in
                             List.iter2 (fun name value -> (localVars#find name)#set value) argNames argValues;
                             match self#exec_list (Expression.makeContext ~obj ~callingClass:inClass localVars) code with
                                 | Return v -> v
@@ -67,7 +68,7 @@ class executor
             let implements = List.map (classRegistry#get) implementsNames in
             classRegistry#add className (new Object.phpClass className isStatic isAbstract isFinal isInterface parent implements !constants !properties !methods !staticMethods !abstractMethods);
             NoOp
-        | Global name -> v.Expression.vars#addFromGlobal name; NoOp
+        | Global name -> v#vars#addFromGlobal name; NoOp
         | Echo e ->
             let `String s = to_string ((evaluator self#exec_file)#eval v e) in
             print_string s;
@@ -112,10 +113,10 @@ class executor
                 a#rewind ();
                 let result = ref NoOp in
                 while not (is_break !result) && a#valid() do
-                    ((v.Expression.vars)#find vn)#set (a#current ());
+                    ((v#vars)#find vn)#set (a#current ());
                     begin match ko with
                         | None -> ()
-                        | Some kn -> let k = a#key () in ((v.Expression.vars)#find kn)#set (`String k)
+                        | Some kn -> let k = a#key () in ((v#vars)#find kn)#set (`String k)
                     end;
                     result := self#exec_list v sl;
                     if not (is_break !result) then
@@ -142,9 +143,9 @@ class executor
         match self#exec_namespace_list context l with
         | Return v -> v
         | _ -> `Bool true
-    method exec_namespace context n =
+    method exec_namespace (context: 'e) n =
         match n with
-        | NamespaceBlock (nname, uses, l) -> self#exec_list context l
+        | NamespaceBlock (nname, uses, l) -> let newContext = Expression.makeContext ~namespace:nname ~namespaceUses:uses context#vars in self#exec_list newContext l
     method exec_namespace_list v nl =
         match nl with
         | [] -> NoOp

@@ -95,20 +95,48 @@ class type ['v] variableRegistry = object
     method addFromGlobal : string -> unit
     end
 
-type ('a, 'o, 'c) evalContext = {
-    vars : ('a, 'o) value variableRegistry;
-    obj: 'o option;
-    callingClass: 'c option;
-    staticClass: 'c option
-}
+class ['a, 'o, 'c] evalContext
+    (vars : ('a, 'o) value variableRegistry)
+    (obj: 'o option)
+    (callingClass: 'c option)
+    (staticClass: 'c option)
+    (namespace: string list)
+    (namespaceUses: (string list * string option) list)
+    = object (self)
+    method vars = vars
+    method obj = obj
+    method callingClass = callingClass
+    method staticClass = staticClass
+    method namespace = namespace
+    method resolveNamespace ?fallbackTest n =
+        let fallbackName = ref None in
+        let fullNameArray = match n with
+        | FullyQualifiedName (parts, name) -> parts @ [name]
+        | RelativeName (parts, name) -> match parts with
+            | [] -> fallbackName := Some name; self#resolveNamespaceAlias name
+            | alias::t -> self#resolveNamespaceAlias alias @ t @ [name]
+        in let fullName = String.concat "\\" fullNameArray in
+        match fallbackTest, !fallbackName with
+        | Some f, Some name ->
+            if f fullName then
+                fullName
+            else
+                name
+        | _ -> fullName
+    method private resolveNamespaceAlias alias =
+        let rec f l = match l with
+        | [] -> self#namespace @ [alias]
+        | (parts, Some a)::t when a = alias -> parts @ [alias]
+        | (_, Some _)::t -> f t
+        | (parts, None)::t -> match List.rev parts with
+            | [] -> assert false
+            | a::p when a = alias -> parts
+            | _ -> f t
+        in f namespaceUses
+    end
 
-let makeContext ?obj ?callingClass ?staticClass vars =
-    {
-        vars = vars;
-        obj = obj;
-        callingClass = callingClass;
-        staticClass = staticClass
-    }
+let makeContext ?obj ?callingClass ?staticClass ?(namespace=[]) ?(namespaceUses=[]) vars =
+    new evalContext vars obj callingClass staticClass namespace namespaceUses
 
 let getSome o = match o with
     | None -> assert false
@@ -128,12 +156,12 @@ class evaluator
     execFile
     =
     object (self)
-    method eval v e =
+    method eval (v : (_, _, _) evalContext) e =
         match e with
         | ConstValue f -> convertConst f
         | ConcatList l -> `String (String.concat "" (List.map (fun e -> let `String s = to_string (self#eval v e) in s) l))
         | Assignable a -> self#eval_assignable v a
-        | This -> `Object (getSome v.obj)
+        | This -> `Object (getSome v#obj)
         | BinaryOperation (op, f, g) -> begin match op with
             | Plus -> eval_binary (+) (+.) (self#eval v f) (self#eval v g)
             | Minus -> eval_binary (-) (-.) (self#eval v f) (self#eval v g)
@@ -153,32 +181,32 @@ class evaluator
         | Xor (f, g) -> boolean_operator (!=) (self#eval v f) (self#eval v g)
         | Not f -> let `Bool b = to_bool (self#eval v f) in `Bool (not b)
         | Comparison (op, f, g) -> `Bool (compare_all op (self#eval v f) (self#eval v g))
-        | FunctionCall (name, argValues) -> functionRegistry#exec name (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
+        | FunctionCall (name, argValues) -> functionRegistry#exec (v#resolveNamespace ~fallbackTest:(functionRegistry#has) name) (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
         | ClassConstant (classRef, constantName) ->
             let phpClass = match classRef with
-                | ClassName className -> classRegistry#get className
-                | Self -> getSome v.callingClass
-                | Parent -> getSome (getSome v.callingClass)#parent
-                | Static -> getSome v.staticClass
+                | ClassName className -> classRegistry#get (v#resolveNamespace className)
+                | Self -> getSome v#callingClass
+                | Parent -> getSome (getSome v#callingClass)#parent
+                | Static -> getSome v#staticClass
             in Object.getClassConstant phpClass constantName
         | MethodCall (obj, methodName, argValues) -> begin match self#eval v obj with
-            | `Object o -> Object.getObjectMethod o v.callingClass methodName (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
+            | `Object o -> Object.getObjectMethod o v#callingClass methodName (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
             | _ -> raise BadType
         end
         | StaticMethodCall (classRef, methodName, argValues) -> begin
             let (phpClass, staticClass) = match classRef with
-                | ClassName className -> let c = classRegistry#get className in (c, c)
-                | Self -> getSome v.callingClass, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
-                | Parent -> getSome (getSome v.callingClass)#parent, (if v.obj <> None then (getSome v.obj)#objectClass else getSome v.staticClass)
-                | Static -> getSome v.staticClass, getSome v.staticClass
+                | ClassName className -> let c = classRegistry#get (v#resolveNamespace className) in (c, c)
+                | Self -> getSome v#callingClass, (if v#obj <> None then (getSome v#obj)#objectClass else getSome v#staticClass)
+                | Parent -> getSome (getSome v#callingClass)#parent, (if v#obj <> None then (getSome v#obj)#objectClass else getSome v#staticClass)
+                | Static -> getSome v#staticClass, getSome v#staticClass
             in
-            let m = if v.obj <> None && (getSome v.obj)#objectClass#instanceOf phpClass then
+            let m = if v#obj <> None && (getSome v#obj)#objectClass#instanceOf phpClass then
                 try
-                    Object.getClassMethod phpClass v.callingClass methodName (getSome v.obj)
+                    Object.getClassMethod phpClass v#callingClass methodName (getSome v#obj)
                 with
-                    | Not_found -> Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
+                    | Not_found -> Object.getClassStaticMethod phpClass v#callingClass methodName staticClass
             else
-                Object.getClassStaticMethod phpClass v.callingClass methodName staticClass
+                Object.getClassStaticMethod phpClass v#callingClass methodName staticClass
             in m (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues)
         end
         | ArrayConstructor l -> let phpArray = new PhpArray.phpArray in
@@ -188,7 +216,7 @@ class evaluator
             in
             List.iter addElement l;
             `Array phpArray
-        | NewObject (className, argValues) -> `Object ((classRegistry#get className)#newObject (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues))
+        | NewObject (className, argValues) -> `Object ((classRegistry#get (v#resolveNamespace className))#newObject (List.map (fun f -> match self#eval v f with `Array a -> `Array (a#copy ()) | a -> a) argValues))
         | Assign (a, f) -> let value = match self#eval v f with
             | `Array arr -> `Array (arr#copy ())
             | value -> value
@@ -219,8 +247,8 @@ class evaluator
 
     method private assign_var v a var =
         match a with
-        | Variable s -> v.vars#replace s var
-        | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#replace s var
+        | Variable s -> v#vars#replace s var
+        | VariableVariable e -> let `String s = to_string (self#eval v e) in v#vars#replace s var
         | ArrayOffset (e, o) ->
             let arr = match self#eval v e with `Array arr -> arr | _ -> raise BadType in
             begin match o with
@@ -229,23 +257,23 @@ class evaluator
             end
         | StaticProperty (classRef, propName) -> begin
             let phpClass = match classRef with
-                | ClassName className -> classRegistry#get className
-                | Self -> getSome v.callingClass
-                | Parent -> getSome (getSome v.callingClass)#parent
-                | Static -> getSome v.staticClass
+                | ClassName className -> classRegistry#get (v#resolveNamespace className)
+                | Self -> getSome v#callingClass
+                | Parent -> getSome (getSome v#callingClass)#parent
+                | Static -> getSome v#staticClass
             in
-            Object.setClassStaticPropertyVar phpClass v.callingClass propName var
+            Object.setClassStaticPropertyVar phpClass v#callingClass propName var
             end
         | Property (obj, propName) -> begin match self#eval v obj with
-            | `Object o -> Object.setObjectPropertyVar o v.callingClass propName var
+            | `Object o -> Object.setObjectPropertyVar o v#callingClass propName var
             | _ -> raise BadType
         end
     method eval_assignable v a = (self#eval_assignable_var v a)#get
         
     method private eval_assignable_var v a =
         match a with
-        | Variable s -> v.vars#find s
-        | VariableVariable e -> let `String s = to_string (self#eval v e) in v.vars#find s
+        | Variable s -> v#vars#find s
+        | VariableVariable e -> let `String s = to_string (self#eval v e) in v#vars#find s
         | ArrayOffset (e, o) -> begin
             match o with
                 | None -> raise MissingArrayOffset
@@ -255,15 +283,15 @@ class evaluator
         end
         | StaticProperty (classRef, propName) -> begin
             let phpClass = match classRef with
-                | ClassName className -> classRegistry#get className
-                | Self -> getSome v.callingClass
-                | Parent -> getSome (getSome v.callingClass)#parent
-                | Static -> getSome v.staticClass
+                | ClassName className -> classRegistry#get (v#resolveNamespace className)
+                | Self -> getSome v#callingClass
+                | Parent -> getSome (getSome v#callingClass)#parent
+                | Static -> getSome v#staticClass
             in
-            Object.getClassStaticPropertyVar phpClass v.callingClass propName
+            Object.getClassStaticPropertyVar phpClass v#callingClass propName
         end
         | Property (obj, propName) -> begin match self#eval v obj with
-            | `Object o -> Object.getObjectPropertyVar o v.callingClass propName
+            | `Object o -> Object.getObjectPropertyVar o v#callingClass propName
             | _ -> raise BadType
         end
     end

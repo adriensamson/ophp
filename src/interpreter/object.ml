@@ -60,9 +60,15 @@ class ['v] phpClass
         method getMethod methodName =
             Hashtbl.find methods methodName
         
-        method newObject (l : 'v list) =
+        method newObject l =
             let o = new phpObject (self :> 'v phpClass) in
             self#initObject o;
+            begin try
+                let (vis, f) = self#getMethod "__construct" in
+                let _ = f o l in ()
+            with
+            | Not_found -> ()
+            end;
             o
         method initObject o =
             begin

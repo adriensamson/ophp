@@ -1,4 +1,3 @@
-* namespaces
 * interfaces, abstract, final
 * trait
 * autoloader
@@ -11,6 +10,7 @@
 * alternative syntax if () : endif
 * pass, return by reference
 * exceptions / errors
+* global constants
 
 * implement standard extensions
 

@@ -21,8 +21,12 @@ type comparisonOperator =
     | NotEqual
     | NotIdentical
 
+type name =
+    | FullyQualifiedName of string list * string
+    | RelativeName of string list * string
+
 type classReference =
-    | ClassName of string
+    | ClassName of name
     | Parent
     | Self
     | Static
@@ -40,7 +44,7 @@ type expr =
     | ConcatList of  expr list
     | Assignable of  assignable
     | This
-    | FunctionCall of string *  expr list
+    | FunctionCall of name *  expr list
     | MethodCall of  expr * string *  expr list
     | StaticMethodCall of classReference * string *  expr list
     | ClassConstant of classReference * string
@@ -59,7 +63,7 @@ type expr =
     | PreDec of  assignable
     | PostDec of  assignable
     | ArrayConstructor of ( expr *  expr) list
-    | NewObject of string *  expr list
+    | NewObject of name *  expr list
     | Include of  expr * bool * bool (* filename, required, once *)
 and  assignable =
     | Variable of string
