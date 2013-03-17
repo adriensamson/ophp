@@ -1,3 +1,4 @@
+== Functions ==
 * interfaces, abstract, final
 * trait
 * autoloader
@@ -11,8 +12,18 @@
 * pass, return by reference
 * exceptions / errors
 * global constants
+* resource type
+* anonymous functions
 
+== Refactoring ==
+* merge expression and statement, externalize some parts
+* evalContext copies instead of makeContext
+* remove variants on value
+* compile
+
+== Extensions ==
+* extension framework
 * implement standard extensions
 
-* TESTS
+== TESTS ==
 
