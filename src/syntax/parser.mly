@@ -199,10 +199,10 @@ argument_call_tail:
 
 array_content_list:
       { [] }
-    | expr { [(Ast.ConstValue `Null, $1)] }
-    | expr TT_COMMA array_content_list  { (Ast.ConstValue `Null, $1)::$3 }
-    | expr T_DOUBLE_ARROW expr { [($1, $3)] }
-    | expr T_DOUBLE_ARROW expr TT_COMMA array_content_list { ($1, $3)::$5 }
+    | expr { [(None, $1)] }
+    | expr TT_COMMA array_content_list  { (None, $1)::$3 }
+    | expr T_DOUBLE_ARROW expr { [(Some $1, $3)] }
+    | expr T_DOUBLE_ARROW expr TT_COMMA array_content_list { (Some $1, $3)::$5 }
 
 assignable:
     | T_VARIABLE { Ast.Variable $1 }

@@ -2,6 +2,6 @@ interpreter/Registry
 interpreter/Variable
 interpreter/PhpArray
 interpreter/Expression
-interpreter/Statement
 interpreter/Main
 interpreter/Object
+interpreter/Compiler

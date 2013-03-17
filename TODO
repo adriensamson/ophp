@@ -16,10 +16,8 @@
 * anonymous functions
 
 == Refactoring ==
-* merge expression and statement, externalize some parts
-* evalContext copies instead of makeContext
+* refactor expression
 * remove variants on value
-* compile
 
 == Extensions ==
 * extension framework
