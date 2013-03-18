@@ -6,6 +6,30 @@ let tryParent o = match o with
 
 let getSome = tryParent
 
+let findWithParents f phpClass callingClass name =
+    let isInstance = try
+        phpClass#instanceOf (getSome callingClass)
+    with
+        | Not_found -> false
+    in
+    try
+        if isInstance then
+            let (vis, value) = f (getSome callingClass) name in
+            if vis = Private then value else raise Not_found
+        else raise Not_found
+    with Not_found ->
+        let rec f' c =
+            try
+                let (vis, value) = f c name in
+                match (vis, isInstance) with
+                    | Public, _
+                    | Protected, true -> value
+                    | _ -> raise Not_found
+            with
+                | Not_found -> f' (tryParent c#parent)
+        in f' phpClass
+
+
 class ['v] variable (value : 'v) =
     object
     val mutable v = value
@@ -83,7 +107,25 @@ class ['v] phpClass
             List.iter (fun (name, _, vis, value) -> Hashtbl.replace staticProperties name (vis, new variable value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
             List.iter (fun (name, vis, f) -> Hashtbl.replace staticMethods name (vis, f (self :> 'v phpClass))) staticMethodsL;
             List.iter (fun (name, vis, f) -> Hashtbl.replace methods name (vis, f (self :> 'v phpClass))) methodsL
-            
+        
+        
+        method getClassConstant name =
+            try
+                self#getConstant name
+            with
+                | Not_found -> (tryParent parent)#getClassConstant name
+        method getClassStaticProperty cc n =
+            (findWithParents (fun c -> c#findStaticProperty) (self :> 'v phpClass) cc n)#get
+        method setClassStaticProperty cc n =
+            (findWithParents (fun c -> c#findStaticProperty) (self :> 'v phpClass) cc n)#set
+        method getClassStaticPropertyVar cc n =
+            (findWithParents (fun c -> c#findStaticProperty) (self :> 'v phpClass) cc n)
+        method setClassStaticPropertyVar cc n =
+            (findWithParents (fun c -> c#replaceStaticProperty) (self :> 'v phpClass) cc n)
+        method getClassStaticMethod =
+            findWithParents (fun c -> c#getStaticMethod) (self :> 'v phpClass)
+        method getClassMethod =
+            findWithParents (fun c -> c#getMethod) (self :> 'v phpClass)
     end
 
 and ['v] phpObject
@@ -102,67 +144,16 @@ and ['v] phpObject
         
         method addProperties phpClass propertiesL =
             List.iter (fun (name, vis, value) -> Hashtbl.replace properties (phpClass, name) (vis, new variable value)) propertiesL
+        
+        method getObjectProperty cc n =
+            (findWithParents (fun c name -> self#findProperty (c, name)) self#objectClass cc n)#get
+        method setObjectProperty cc n =
+            (findWithParents (fun c name -> self#findProperty (c, name)) self#objectClass cc n)#set
+        method getObjectPropertyVar cc n =
+            (findWithParents (fun c name -> self#findProperty (c, name)) self#objectClass cc n)
+        method setObjectPropertyVar cc n =
+            (findWithParents (fun c name -> self#replaceProperty (c, name)) self#objectClass cc n)
+        method getObjectMethod callingClass methodName =
+            self#objectClass#getClassMethod callingClass methodName (self :> 'v phpObject)
     end
-
-let rec getClassConstant phpClass name =
-    try
-        phpClass#getConstant name
-    with
-        | Not_found -> getClassConstant (tryParent phpClass#parent) name
-
-let findWithParents f (phpClass : 'v phpClass) callingClass name =
-    let isInstance = try
-        phpClass#instanceOf (getSome callingClass)
-    with
-        | Not_found -> false
-    in
-    try
-        if isInstance then
-            let (vis, value) = f (getSome callingClass) name in
-            if vis = Private then value else raise Not_found
-        else raise Not_found
-    with Not_found ->
-        let rec f' c =
-            try
-                let (vis, value) = f c name in
-                match (vis, isInstance) with
-                    | Public, _
-                    | Protected, true -> value
-                    | _ -> raise Not_found
-            with
-                | Not_found -> f' (tryParent c#parent)
-        in f' phpClass
-
-let getClassStaticProperty c cc n =
-    (findWithParents (fun c -> c#findStaticProperty) c cc n)#get
-
-let setClassStaticProperty c cc n =
-    (findWithParents (fun c -> c#findStaticProperty) c cc n)#set
-
-let getClassStaticPropertyVar c cc n =
-    (findWithParents (fun c -> c#findStaticProperty) c cc n)
-
-let setClassStaticPropertyVar c cc n =
-    (findWithParents (fun c -> c#replaceStaticProperty) c cc n)
-
-let getClassStaticMethod c =
-    findWithParents (fun c -> c#getStaticMethod) c
-
-let getClassMethod c =
-    findWithParents (fun c -> c#getMethod) c
-
-let getObjectProperty obj cc n =
-    (findWithParents (fun c name -> obj#findProperty (c, name)) obj#objectClass cc n)#get
-
-let setObjectProperty obj cc n =
-    (findWithParents (fun c name -> obj#findProperty (c, name)) obj#objectClass cc n)#set
-
-let getObjectPropertyVar obj cc n =
-    (findWithParents (fun c name -> obj#findProperty (c, name)) obj#objectClass cc n)
-
-let setObjectPropertyVar obj cc n =
-    (findWithParents (fun c name -> obj#replaceProperty (c, name)) obj#objectClass cc n)
-
-let getObjectMethod obj callingClass methodName =
-    getClassMethod obj#objectClass callingClass methodName obj
 

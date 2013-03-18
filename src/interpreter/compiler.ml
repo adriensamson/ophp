@@ -319,12 +319,12 @@ class compiler
                 | Self -> getSome context#callingClass
                 | Parent -> getSome (getSome context#callingClass)#parent
                 | Static -> getSome context#staticClass
-            in Object.getClassConstant phpClass constantName
+            in phpClass#getClassConstant constantName
         | MethodCall (obj, methodName, argValues) ->
             let cobj = self#compileExpr obj in
             let compiledArgs = List.map self#compileExpr argValues in
             fun context -> begin match cobj context with
-                | `Object o -> Object.getObjectMethod o context#callingClass methodName (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
+                | `Object o -> o#getObjectMethod context#callingClass methodName (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
                 | _ -> raise BadType
             end
         | StaticMethodCall (classRef, methodName, argValues) -> begin
@@ -338,11 +338,11 @@ class compiler
                 in
                 let m = if context#obj <> None && (getSome context#obj)#objectClass#instanceOf phpClass then
                     try
-                        Object.getClassMethod phpClass context#callingClass methodName (getSome context#obj)
+                        phpClass#getClassMethod context#callingClass methodName (getSome context#obj)
                     with
-                        | Not_found -> Object.getClassStaticMethod phpClass context#callingClass methodName staticClass
+                        | Not_found -> phpClass#getClassStaticMethod context#callingClass methodName staticClass
                 else
-                    Object.getClassStaticMethod phpClass context#callingClass methodName staticClass
+                    phpClass#getClassStaticMethod context#callingClass methodName staticClass
                 in m (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
             end
         | ArrayConstructor l ->
@@ -427,12 +427,12 @@ class compiler
                     | Parent -> getSome (getSome context#callingClass)#parent
                     | Static -> getSome context#staticClass
                 in
-                Object.getClassStaticPropertyVar phpClass context#callingClass propName
+                phpClass#getClassStaticPropertyVar context#callingClass propName
         | Property (obj, propName) ->
             let cobj = self#compileExpr obj in
             fun context ->
                 begin match cobj context with
-                | `Object o -> Object.getObjectPropertyVar o context#callingClass propName
+                | `Object o -> o#getObjectPropertyVar context#callingClass propName
                 | _ -> raise BadType
                 end
     method private compileAssignVar a =
@@ -459,12 +459,12 @@ class compiler
                     | Parent -> getSome (getSome context#callingClass)#parent
                     | Static -> getSome context#staticClass
                 in
-                Object.setClassStaticPropertyVar phpClass context#callingClass propName var
+                phpClass#setClassStaticPropertyVar context#callingClass propName var
         | Property (obj, propName) ->
             let cobj = self#compileExpr obj in
             fun context var ->
                 begin match cobj context with
-                | `Object o -> Object.setObjectPropertyVar o context#callingClass propName var
+                | `Object o -> o#setObjectPropertyVar context#callingClass propName var
                 | _ -> raise BadType
                 end
 end
