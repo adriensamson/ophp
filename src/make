@@ -1,11 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
 cd $(dirname $0)
 
 TARGET=main
-FLAGS="-libs str"
+FLAGS="-libs str,dynlink,unix"
 FLAGS="$FLAGS -yaccflag -v -lflag -g"
 OCAMLBUILD=ocamlbuild
 
@@ -19,7 +19,7 @@ rule() {
     clean)  ocb -clean;;
     native) ocb $TARGET.native;;
     byte)   ocb $TARGET.byte;;
-    all)    ocb $TARGET.native $TARGET.byte;;
+    all)    ocb $TARGET.native $TARGET.byte extensions/core/closure.cm{o,xs};;
     depend) echo "Not needed.";;
     *)      echo "Unknown action $1";;
   esac;

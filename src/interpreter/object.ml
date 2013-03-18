@@ -89,7 +89,9 @@ class ['v] phpClass
             self#initObject o;
             begin try
                 let (vis, f) = self#getMethod "__construct" in
-                let _ = f o l in ()
+                if vis = Public then
+                    let _ = f o l in ()
+                else raise BadVisibility
             with
             | Not_found -> ()
             end;

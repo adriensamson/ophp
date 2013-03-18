@@ -28,7 +28,7 @@ class ['v] variableRegistry =
         method addFromParent name =
             match parentScope with
             | None -> failwith "No parent scope"
-            | Some p -> self#replace name (p#find name)
+            | Some p -> (self#find name)#set (p#find name)#get
         method addFromGlobal name =
             match globalScope with
             | None -> failwith "No global scope"

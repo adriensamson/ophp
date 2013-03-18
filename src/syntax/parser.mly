@@ -236,6 +236,10 @@ expr:
     | TT_MINUS expr %prec UNARY_MINUS { Ast.UnaryMinus $2 }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
     
+    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure ($3, [], $6) }
+    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure ($3, $7, $10) }
+    | T_VARIABLE TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.Invoke (Ast.Assignable(Ast.Variable $1), $3) }
+    
     | expr TT_PLUS expr { Ast.BinaryOperation(Ast.Plus, $1, $3) }
     | expr TT_MINUS expr { Ast.BinaryOperation(Ast.Minus, $1, $3) }
     | expr TT_MUL expr { Ast.BinaryOperation(Ast.Mult, $1, $3) }

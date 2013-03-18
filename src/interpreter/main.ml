@@ -1,3 +1,6 @@
+let addExtension filename =
+    Extension.loadFile filename
+
 let run chan =
     let parse chan =
         Syntax.Lexer.reset ();
@@ -6,6 +9,7 @@ let run chan =
     in
     let filesr = new Registry.fileRegistry parse in
     let context = Expression.makeContext (new Variable.variableRegistry) (new Registry.functionRegistry) (new Registry.classRegistry) filesr in
+    Extension.loadExtenstionsInContext context;
     let compiler = new Compiler.compiler in
     let cfile = compiler#compileFile (filesr#parseChannel chan) in
     cfile context

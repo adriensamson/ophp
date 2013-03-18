@@ -112,6 +112,7 @@ class ['a, 'o, 'c] evalContext
     val staticClass = staticClass
     val namespace = namespace
     val namespaceUses = namespaceUses
+    val mutable closureFactory = ((fun _ -> failwith "No closure factory") : (((('a, 'o) value as 'v) list) -> 'v) -> 'v)
     method vars = vars
     method functions = functions
     method classes = classes
@@ -157,6 +158,8 @@ class ['a, 'o, 'c] evalContext
             namespace = namespace;
             namespaceUses = namespaceUses
         >}
+    method newClosure f = closureFactory f
+    method setClosureFactory f = closureFactory <- f
 end
 
 let makeContext ?obj ?callingClass ?staticClass ?(namespace=[]) ?(namespaceUses=[]) vars functions classes files =

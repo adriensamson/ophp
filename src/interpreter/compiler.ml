@@ -31,6 +31,8 @@ class type ['a, 'o, 'c] evalContext
     method files : ('a, 'o) value Registry.fileRegistry
     method functionScope : ?callingClass:'c -> ?obj:'o -> ?staticClass:'c -> unit -> ('a, 'o, 'c) evalContext
     method namespaceScope : namespace:(string list) -> namespaceUses:((string list * string option) list) -> unit -> ('a, 'o, 'c) evalContext
+    method newClosure : ((('a, 'o) value as 'v) list -> 'v) -> 'v
+    method setClosureFactory : (((('a, 'o) value as 'v) list -> 'v) -> 'v) -> unit
 end
 
 type ('a, 'o, 'c) compileClassContent =
@@ -308,11 +310,30 @@ class compiler
             let cf = self#compileExpr f in
             let cg = self#compileExpr g in
             fun context -> `Bool (Expression.compare_all op (cf context) (cg context))
+        | Closure (argNames, uses, code) ->
+            let compiledCode = self#compileStmtList code in
+            fun context ->
+                let f argValues =
+                    let localContext = context#functionScope () in
+                    List.iter (fun name -> localContext#vars#addFromParent name) uses;
+                    List.iter2 (fun name value -> (localContext#vars#find name)#set value) argNames argValues;
+                    match compiledCode localContext with
+                        | Return v -> v
+                        | _ -> `Null
+                in context#newClosure f
         | FunctionCall (name, argValues) ->
             let compiledArgs = List.map self#compileExpr argValues in
             fun context -> context#functions#exec
                 (context#resolveNamespace ~fallbackTest:(context#functions#has) name)
                 (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
+        | Invoke (e, argValues) ->
+            let ce = self#compileExpr e in
+            let compiledArgs = List.map self#compileExpr argValues in
+            fun context ->
+                begin match ce context with
+                | `Object o -> (o#getObjectMethod None "__invoke") (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
+                | _ -> failwith "not a closure"
+                end
         | Language.Ast.ClassConstant (classRef, constantName) ->
             fun context -> let phpClass = match classRef with
                 | ClassName className -> context#classes#get (context#resolveNamespace className)

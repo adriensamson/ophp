@@ -43,8 +43,10 @@ type expr =
     | ConstValue of constValues
     | ConcatList of  expr list
     | Assignable of  assignable
+    | Closure of string list* string list * stmt list
     | This
     | FunctionCall of name *  expr list
+    | Invoke of expr * expr list
     | MethodCall of  expr * string *  expr list
     | StaticMethodCall of classReference * string *  expr list
     | ClassConstant of classReference * string
@@ -71,8 +73,7 @@ and  assignable =
     | ArrayOffset of  expr *  expr option
     | Property of  expr * string
     | StaticProperty of classReference * string
-
-type  stmt =
+and  stmt =
     | Global of string
     | Echo of  expr
     | Return of  expr
