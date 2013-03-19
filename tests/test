@@ -7,8 +7,8 @@ function test_file {
     local BASENAME=${1%.php}
     if [ "$1" == "$BASENAME.php" ]
     then
-        $PHP_BIN <$BASENAME.php >$BASENAME.expected
-        $BIN <$BASENAME.php >$BASENAME.result
+        $PHP_BIN $BASENAME.php >$BASENAME.expected
+        $BIN $BASENAME.php >$BASENAME.result
         diff -u $BASENAME.expected $BASENAME.result
     fi
 }

@@ -11,7 +11,7 @@
 * alternative syntax if () : endif
 * pass, return by reference
 * exceptions / errors
-* global constants
+* constants-namespaces interaction
 * resource type
 * anonymous functions
 

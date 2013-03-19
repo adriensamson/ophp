@@ -1,3 +1,13 @@
+class ['v] constantRegistry =
+    object
+        val constants = Hashtbl.create 10
+        method add (name : string) (value: 'v) =
+            Hashtbl.add constants name value
+        method get name =
+            Hashtbl.find constants name
+        method has name = Hashtbl.mem constants name
+    end
+
 class ['v] functionRegistry =
     object
         val functions = Hashtbl.create 10

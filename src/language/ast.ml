@@ -41,6 +41,7 @@ type constValues = [
 
 type expr =
     | ConstValue of constValues
+    | Constant of string
     | ConcatList of  expr list
     | Assignable of  assignable
     | Closure of string list* string list * stmt list

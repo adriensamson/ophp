@@ -26,6 +26,7 @@ class type ['a, 'o, 'c] evalContext
     method staticClass : 'c option
     method namespace : string list
     method resolveNamespace : ?fallbackTest:(string -> bool) -> Language.Ast.name -> string
+    method constants : ('a, 'o) value Registry.constantRegistry
     method functions : ('a, 'o) value Registry.functionRegistry
     method classes : 'c Registry.classRegistry
     method files : ('a, 'o) value Registry.fileRegistry
@@ -33,6 +34,33 @@ class type ['a, 'o, 'c] evalContext
     method namespaceScope : namespace:(string list) -> namespaceUses:((string list * string option) list) -> unit -> ('a, 'o, 'c) evalContext
     method newClosure : ((('a, 'o) value as 'v) list -> 'v) -> 'v
     method setClosureFactory : (((('a, 'o) value as 'v) list -> 'v) -> 'v) -> unit
+end
+
+class compileContext = object
+    val file = ""
+    val dir = ""
+    val func = ""
+    val cla = ""
+    val trait = ""
+    val meth = ""
+    val namespace = ""
+    method getFile = file
+    method getDir = dir
+    method getFunction = func
+    method getClass = cla
+    method getTrait = trait
+    method getMethod = meth
+    method getNamespace = namespace
+    
+    method setFile f =
+        let absF = FilePath.make_absolute (Sys.getcwd ()) f in
+        let absD = FilePath.dirname absF in
+        {< file = absF; dir = absD; namespace = "" >}
+    method setFunction f = {< func = f >}
+    method setClass c = {< cla = c >}
+    method setTrait t = {< trait = t >}
+    method setMethod m = {< func = m; meth = cla ^ "::" ^ m >}
+    method setNamespace n = {< namespace = n >}
 end
 
 type ('a, 'o, 'c) compileClassContent =
@@ -54,7 +82,6 @@ let functionDef name argNames compiledCode =
 
 let classDef className isStatic isAbstract isFinal isInterface parentName implementsNames constants properties methods staticMethods abstractMethods =
     fun context ->
-        let className = String.concat "\\" (context#namespace @ [className]) in
         let parent = match parentName with None -> None | Some n -> Some (context#classes#get n) in
         let implements = List.map (context#classes#get) implementsNames in
         context#classes#add
@@ -75,8 +102,8 @@ let getSome o = match o with
 
 class compiler
     = object (self)
-    method compileStmtList sl =
-        let cl = List.map (self#compileStmt) sl in
+    method compileStmtList (compileContext : compileContext) sl =
+        let cl = List.map (self#compileStmt compileContext) sl in
         let rec exec_list cl context =
             match cl with
             | [] -> NoOp
@@ -84,43 +111,55 @@ class compiler
                 | NoOp -> exec_list t context
                 | r -> r
         in exec_list cl
-    method compileStmt s =
+    method compileStmt compileContext s =
         match s with
-        | IgnoreResult e -> let ce = self#compileExpr e in fun context -> let _ = ce context in NoOp
-        | Language.Ast.Return e -> let ce = self#compileExpr e in fun context -> Return (ce context)
+        | IgnoreResult e -> let ce = self#compileExpr compileContext e in fun context -> let _ = ce context in NoOp
+        | Language.Ast.Return e -> let ce = self#compileExpr compileContext e in fun context -> Return (ce context)
         | Language.Ast.Break i -> fun context -> Break i
         | Language.Ast.Continue i -> fun context -> Continue i
         | FunctionDef (name, argNames, code) ->
-            let compiledCode = self#compileStmtList code in
+            let fullFunctionName =
+                if compileContext#getNamespace = "" then
+                    name
+                else
+                    compileContext#getNamespace ^ "\\" ^ name
+            in
+            let compiledCode = self#compileStmtList (compileContext#setFunction fullFunctionName) code in
             functionDef name argNames compiledCode
         | ClassDef (className, isStatic, isAbstract, isFinal, isInterface, parentName, implementsNames, contents) ->
-            let constants, properties, methods, staticMethods, abstractMethods =
-                self#compileClassContentList contents
+            let fullClassName =
+                if compileContext#getNamespace = "" then
+                    className
+                else
+                    compileContext#getNamespace ^ "\\" ^ className
             in
-            classDef className isStatic isAbstract isFinal isInterface parentName implementsNames constants properties methods staticMethods abstractMethods
+            let constants, properties, methods, staticMethods, abstractMethods =
+                self#compileClassContentList (compileContext#setClass fullClassName) contents
+            in
+            classDef fullClassName isStatic isAbstract isFinal isInterface parentName implementsNames constants properties methods staticMethods abstractMethods
         | Global name -> fun context -> context#vars#addFromGlobal name; NoOp
         | Echo e ->
-            let ce = self#compileExpr e in
+            let ce = self#compileExpr compileContext e in
             fun context ->
                 let `String s = to_string (ce context) in
                 print_string s;
                 NoOp
         | If (e, sl) ->
-            let ce = self#compileExpr e in
-            let compiledCode = self#compileStmtList sl in
+            let ce = self#compileExpr compileContext e in
+            let compiledCode = self#compileStmtList compileContext sl in
             fun context ->
                 let `Bool cond = to_bool (ce context) in
                 if cond then compiledCode context else NoOp
         | IfElse (e, sl1, sl2) ->
-            let ce = self#compileExpr e in
-            let compiledCode1 = self#compileStmtList sl1 in
-            let compiledCode2 = self#compileStmtList sl2 in
+            let ce = self#compileExpr compileContext e in
+            let compiledCode1 = self#compileStmtList compileContext sl1 in
+            let compiledCode2 = self#compileStmtList compileContext sl2 in
             fun context ->
                 let `Bool cond = to_bool (ce context) in
                 if cond then compiledCode1 context else compiledCode2 context
         | While (e, sl) -> begin
-            let ce = self#compileExpr e in
-            let compiledCode = self#compileStmtList sl in
+            let ce = self#compileExpr compileContext e in
+            let compiledCode = self#compileStmtList compileContext sl in
             fun context ->
                 let result = ref NoOp in
                 while not (is_break !result) && let `Bool cond = to_bool (ce context) in cond do
@@ -134,10 +173,10 @@ class compiler
                     | _ -> !result
             end
         | For (eInit, eEnd, eLoop, sl) -> begin
-            let ceInit = List.map self#compileExpr eInit in
-            let ceEnd = List.map self#compileExpr eEnd in
-            let ceLoop = List.map self#compileExpr eLoop in
-            let compiledCode = self#compileStmtList sl in
+            let ceInit = List.map (self#compileExpr compileContext) eInit in
+            let ceEnd = List.map (self#compileExpr compileContext) eEnd in
+            let ceLoop = List.map (self#compileExpr compileContext) eLoop in
+            let compiledCode = self#compileStmtList compileContext sl in
             fun context ->
                 let result = ref NoOp in
                 let rec eval_all es = match es with
@@ -160,8 +199,8 @@ class compiler
                     | _ -> !result
             end
         | Foreach (e, ko, vn, sl) -> begin
-            let ce = self#compileExpr e in
-            let compiledCode = self#compileStmtList sl in
+            let ce = self#compileExpr compileContext e in
+            let compiledCode = self#compileStmtList compileContext sl in
             fun context ->
                 match ce context with
                 | `Array a -> begin
@@ -188,32 +227,32 @@ class compiler
                 | _ -> raise NotTraversable
             end
     
-    method compileClassContentList l =
+    method compileClassContentList compileContext l =
         match l with
         | [] -> ([], [], [], [], [])
         | a::t ->
-            let c, p, m, sm, am = self#compileClassContentList t in
-            match self#compileClassContent a with
+            let c, p, m, sm, am = self#compileClassContentList compileContext t in
+            match self#compileClassContent compileContext a with
             | ClassConstant cc -> cc::c, p, m, sm, am
             | ClassProperty cp -> c, cp::p, m, sm, am
             | ClassMethod cm -> c, p, cm::m, sm, am
             | ClassStaticMethod csm -> c, p, m, csm::sm, am
             | ClassAbstractMethod cam -> c, p, m, sm, cam::am
-    method compileClassContent c =
+    method compileClassContent compileContext c =
         match c with
         | ConstantDef (name, e) ->
-            let ce = self#compileExpr e in
+            let ce = self#compileExpr compileContext e in
             ClassConstant (fun context -> (name, ce context))
         | PropertyDef (name, isStatic, visibility, init) ->
             let inited =
                 match init with
                 | None -> fun context -> `Null
-                | Some i -> self#compileExpr i
+                | Some i -> self#compileExpr compileContext i
             in ClassProperty (fun context -> (name, isStatic, visibility, inited context))
         | MethodDef (name, isStatic, visibility, argNames, code) ->
             begin match isStatic with
             | true ->
-                let compiledCode = self#compileStmtList code in
+                let compiledCode = self#compileStmtList (compileContext#setMethod name) code in
                 ClassStaticMethod (fun context ->
                     let f inClass finalClass argValues =
                     let localContext = context#functionScope ~callingClass:inClass ~staticClass:finalClass () in
@@ -225,7 +264,7 @@ class compiler
                     (name, visibility, f)
                 )
             | false ->
-                let compiledCode = self#compileStmtList code in
+                let compiledCode = self#compileStmtList compileContext code in
                 ClassMethod (fun context ->
                     let f inClass obj argValues =
                     let localContext = context#functionScope ~callingClass:inClass ~obj () in
@@ -239,21 +278,21 @@ class compiler
             end
         | AbstractMethodDef (name, isStatic, visibility, argNames) ->
             ClassAbstractMethod (name, isStatic, visibility, argNames)
-    method compileFile l =
-        let compiledNl = self#compileNamespaceList l in
+    method compileFile compileContext l =
+        let compiledNl = self#compileNamespaceList compileContext l in
         fun context ->
             match compiledNl context with
             | Return v -> v
             | _ -> `Bool true
-    method compileNamespace n =
+    method compileNamespace compileContext n =
         match n with
         | NamespaceBlock (nname, uses, l) ->
-            let compiledCode = self#compileStmtList l in
+            let compiledCode = self#compileStmtList (compileContext#setNamespace (String.concat "\\" nname)) l in
             fun (context:(_,_,_) evalContext) ->
                 let newContext = context#namespaceScope ~namespace:nname ~namespaceUses:uses () in
                 compiledCode newContext
-    method compileNamespaceList nl =
-        let cnl = List.map self#compileNamespace nl in
+    method compileNamespaceList compileContext nl =
+        let cnl = List.map (self#compileNamespace compileContext) nl in
         let rec execNamespaceList cnl context =
             match cnl with
             | [] -> NoOp
@@ -262,19 +301,30 @@ class compiler
                 | r -> r
         in execNamespaceList cnl
     
-    method compileExpr e =
+    method compileExpr compileContext e =
         match e with
         | ConstValue f -> fun _ -> Expression.convertConst f
+        | Constant name -> begin match name with
+            | "__LINE__" -> fun _ -> `Long 0
+            | "__FILE__" -> fun _ -> `String compileContext#getFile
+            | "__DIR__" -> fun _ -> `String compileContext#getDir
+            | "__FUNCTION__" -> fun _ -> `String compileContext#getFunction
+            | "__CLASS__" -> fun _ -> `String compileContext#getClass
+            | "__TRAIT__" -> fun _ -> `String compileContext#getTrait
+            | "__METHOD__" -> fun _ -> `String compileContext#getMethod
+            | "__NAMESPACE__" -> fun _ -> `String compileContext#getNamespace
+            | _ -> fun context -> context#constants#get name
+            end
         | ConcatList l ->
-            let compiledExprs = List.map self#compileExpr l in
+            let compiledExprs = List.map (self#compileExpr compileContext) l in
             fun context -> `String (String.concat "" (List.map (fun ce -> let `String s = to_string (ce context) in s) compiledExprs))
         | Assignable a ->
-            let ca = self#compileAssignable a in
+            let ca = self#compileAssignable compileContext a in
             fun context -> (ca context)#get
         | This -> fun context -> `Object (getSome context#obj)
         | BinaryOperation (op, f, g) ->
-            let cf = self#compileExpr f in
-            let cg = self#compileExpr g in
+            let cf = self#compileExpr compileContext f in
+            let cg = self#compileExpr compileContext g in
             begin match op with
             | Plus -> fun context -> Expression.eval_binary (+) (+.) (cf context) (cg context)
             | Minus -> fun context -> Expression.eval_binary (-) (-.) (cf context) (cg context)
@@ -289,29 +339,29 @@ class compiler
             | ShiftRight -> fun context -> Expression.bitwise_operator (lsr) (cf context) (cg context)
             end
         | UnaryMinus f ->
-            let cf = self#compileExpr f in
+            let cf = self#compileExpr compileContext f in
             fun context -> Expression.eval_binary (-) (-.) (`Long 0) (cf context)
         | And (f, g) ->
-            let cf = self#compileExpr f in
-            let cg = self#compileExpr g in
+            let cf = self#compileExpr compileContext f in
+            let cg = self#compileExpr compileContext g in
             fun context -> Expression.boolean_operator (&&) (cf context) (cg context)
         | Or (f, g) ->
-            let cf = self#compileExpr f in
-            let cg = self#compileExpr g in
+            let cf = self#compileExpr compileContext f in
+            let cg = self#compileExpr compileContext g in
             fun context -> Expression.boolean_operator (||) (cf context) (cg context)
         | Xor (f, g) ->
-            let cf = self#compileExpr f in
-            let cg = self#compileExpr g in
+            let cf = self#compileExpr compileContext f in
+            let cg = self#compileExpr compileContext g in
             fun context -> Expression.boolean_operator (<>) (cf context) (cg context)
         | Not f ->
-            let cf = self#compileExpr f in
+            let cf = self#compileExpr compileContext f in
             fun context -> let `Bool b = to_bool (cf context) in `Bool (not b)
         | Comparison (op, f, g) ->
-            let cf = self#compileExpr f in
-            let cg = self#compileExpr g in
+            let cf = self#compileExpr compileContext f in
+            let cg = self#compileExpr compileContext g in
             fun context -> `Bool (Expression.compare_all op (cf context) (cg context))
         | Closure (argNames, uses, code) ->
-            let compiledCode = self#compileStmtList code in
+            let compiledCode = self#compileStmtList compileContext code in
             fun context ->
                 let f argValues =
                     let localContext = context#functionScope () in
@@ -322,13 +372,13 @@ class compiler
                         | _ -> `Null
                 in context#newClosure f
         | FunctionCall (name, argValues) ->
-            let compiledArgs = List.map self#compileExpr argValues in
+            let compiledArgs = List.map (self#compileExpr compileContext) argValues in
             fun context -> context#functions#exec
                 (context#resolveNamespace ~fallbackTest:(context#functions#has) name)
                 (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
         | Invoke (e, argValues) ->
-            let ce = self#compileExpr e in
-            let compiledArgs = List.map self#compileExpr argValues in
+            let ce = self#compileExpr compileContext e in
+            let compiledArgs = List.map (self#compileExpr compileContext) argValues in
             fun context ->
                 begin match ce context with
                 | `Object o -> (o#getObjectMethod None "__invoke") (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
@@ -342,14 +392,14 @@ class compiler
                 | Static -> getSome context#staticClass
             in phpClass#getClassConstant constantName
         | MethodCall (obj, methodName, argValues) ->
-            let cobj = self#compileExpr obj in
-            let compiledArgs = List.map self#compileExpr argValues in
+            let cobj = self#compileExpr compileContext obj in
+            let compiledArgs = List.map (self#compileExpr compileContext) argValues in
             fun context -> begin match cobj context with
                 | `Object o -> o#getObjectMethod context#callingClass methodName (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
                 | _ -> raise BadType
             end
         | StaticMethodCall (classRef, methodName, argValues) -> begin
-            let compiledArgs = List.map self#compileExpr argValues in
+            let compiledArgs = List.map (self#compileExpr compileContext) argValues in
             fun context ->
                 let (phpClass, staticClass) = match classRef with
                     | ClassName className -> let c = context#classes#get (context#resolveNamespace className) in (c, c)
@@ -367,7 +417,7 @@ class compiler
                 in m (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs)
             end
         | ArrayConstructor l ->
-            let compiledL = List.map (fun (e1, e2) -> ((match e1 with None -> None | Some e1 -> Some (self#compileExpr e1)), self#compileExpr e2)) l in
+            let compiledL = List.map (fun (e1, e2) -> ((match e1 with None -> None | Some e1 -> Some (self#compileExpr compileContext e1)), self#compileExpr compileContext e2)) l in
             fun context ->
                 let phpArray = new PhpArray.phpArray in
                 let addElement (e1, e2) = match e1 with
@@ -377,12 +427,12 @@ class compiler
                 List.iter addElement compiledL;
                 `Array phpArray
         | NewObject (className, argValues) ->
-            let compiledArgs = List.map self#compileExpr argValues in
+            let compiledArgs = List.map (self#compileExpr compileContext) argValues in
             fun context -> `Object ((context#classes#get (context#resolveNamespace className))#newObject (List.map (fun cf -> match cf context with `Array a -> `Array (a#copy ()) | a -> a) compiledArgs))
         | Assign (a, f) ->
-            let ca = self#compileAssignable a in
-            let cav = self#compileAssignVar a in
-            let cf = self#compileExpr f in
+            let ca = self#compileAssignable compileContext a in
+            let cav = self#compileAssignVar compileContext a in
+            let cf = self#compileExpr compileContext f in
             fun context ->
                 let value = match cf context with
                 | `Array arr -> `Array (arr#copy ())
@@ -402,36 +452,36 @@ class compiler
                 end;
                 value
         | AssignByRef (a, b) ->
-            let cav = self#compileAssignVar a in
-            let cb = self#compileAssignable b in
+            let cav = self#compileAssignVar compileContext a in
+            let cb = self#compileAssignable compileContext b in
             fun context ->
                 let var = cb context in
                 cav context var;
                 var#get
-        | BinaryAssign (op, a, f) -> self#compileExpr (Assign (a, BinaryOperation (op, Assignable a, f)))
-        | PreInc a -> self#compileExpr (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))
+        | BinaryAssign (op, a, f) -> self#compileExpr compileContext (Assign (a, BinaryOperation (op, Assignable a, f)))
+        | PreInc a -> self#compileExpr compileContext (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))
         | PostInc a ->
-            let ret = self#compileExpr (Assignable a) in
-            let inc = self#compileExpr (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1)))) in
+            let ret = self#compileExpr compileContext (Assignable a) in
+            let inc = self#compileExpr compileContext (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1)))) in
             fun context -> let _ = inc context in ret context
-        | PreDec a -> self#compileExpr (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1))))
+        | PreDec a -> self#compileExpr compileContext (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1))))
         | PostDec a ->
-            let ret = self#compileExpr (Assignable a) in
-            let inc = self#compileExpr (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in
+            let ret = self#compileExpr compileContext (Assignable a) in
+            let inc = self#compileExpr compileContext (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in
             fun context -> let _ = inc context in ret context
         | Include (filename, required, once) ->
-            let cf = self#compileExpr filename in
-            fun context -> let `String f = to_string (cf context) in context#files#includeFile f required once (fun l -> (self#compileFile l) context)
+            let cf = self#compileExpr compileContext filename in
+            fun context -> let `String f = to_string (cf context) in context#files#includeFile f required once (fun l -> (self#compileFile (compileContext#setFile f) l) context)
 
-    method private compileAssignable a =
+    method private compileAssignable compileContext a =
         match a with
         | Variable s -> fun context -> context#vars#find s
         | VariableVariable e ->
-            let ce = self#compileExpr e in
+            let ce = self#compileExpr compileContext e in
             fun context -> let `String s = to_string (ce context) in context#vars#find s
         | ArrayOffset (e, o) ->
-            let ce = self#compileExpr e in
-            let co = match o with None -> None | Some o -> Some (self#compileExpr o) in
+            let ce = self#compileExpr compileContext e in
+            let co = match o with None -> None | Some o -> Some (self#compileExpr compileContext o) in
             fun context ->
                 begin match co with
                 | None -> raise Expression.MissingArrayOffset
@@ -450,21 +500,21 @@ class compiler
                 in
                 phpClass#getClassStaticPropertyVar context#callingClass propName
         | Property (obj, propName) ->
-            let cobj = self#compileExpr obj in
+            let cobj = self#compileExpr compileContext obj in
             fun context ->
                 begin match cobj context with
                 | `Object o -> o#getObjectPropertyVar context#callingClass propName
                 | _ -> raise BadType
                 end
-    method private compileAssignVar a =
+    method private compileAssignVar compileContext a =
         match a with
         | Variable s -> fun context var -> context#vars#replace s var
         | VariableVariable e ->
-            let ce = self#compileExpr e in
+            let ce = self#compileExpr compileContext e in
             fun context var -> let `String s = to_string (ce context) in context#vars#replace s var
         | ArrayOffset (e, o) ->
-            let ce = self#compileExpr e in
-            let co = match o with None -> None | Some o -> Some (self#compileExpr o) in
+            let ce = self#compileExpr compileContext e in
+            let co = match o with None -> None | Some o -> Some (self#compileExpr compileContext o) in
             fun context var ->
                 let arr = match ce context with `Array arr -> arr | _ -> raise BadType in
                 begin match co with
@@ -482,7 +532,7 @@ class compiler
                 in
                 phpClass#setClassStaticPropertyVar context#callingClass propName var
         | Property (obj, propName) ->
-            let cobj = self#compileExpr obj in
+            let cobj = self#compileExpr compileContext obj in
             fun context var ->
                 begin match cobj context with
                 | `Object o -> o#setObjectPropertyVar context#callingClass propName var

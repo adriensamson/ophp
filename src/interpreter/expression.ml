@@ -96,6 +96,7 @@ class type ['v] variableRegistry = object
     end
 
 class ['a, 'o, 'c] evalContext
+    (constants : ('a, 'o) value Registry.constantRegistry)
     (vars : ('a, 'o) value variableRegistry)
     (functions : ('a, 'o) value Registry.functionRegistry)
     (classes : 'c Registry.classRegistry)
@@ -113,6 +114,7 @@ class ['a, 'o, 'c] evalContext
     val namespace = namespace
     val namespaceUses = namespaceUses
     val mutable closureFactory = ((fun _ -> failwith "No closure factory") : (((('a, 'o) value as 'v) list) -> 'v) -> 'v)
+    method constants = constants
     method vars = vars
     method functions = functions
     method classes = classes
@@ -162,8 +164,8 @@ class ['a, 'o, 'c] evalContext
     method setClosureFactory f = closureFactory <- f
 end
 
-let makeContext ?obj ?callingClass ?staticClass ?(namespace=[]) ?(namespaceUses=[]) vars functions classes files =
-    new evalContext vars functions classes files obj callingClass staticClass namespace namespaceUses
+let makeContext ?obj ?callingClass ?staticClass ?(namespace=[]) ?(namespaceUses=[]) constants vars functions classes files =
+    new evalContext constants vars functions classes files obj callingClass staticClass namespace namespaceUses
 
 let getSome o = match o with
     | None -> assert false
