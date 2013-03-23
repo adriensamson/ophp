@@ -77,7 +77,7 @@ type ('a, 'o, 'c) compileClassContent =
     | ClassStaticMethod of (('a, 'o, 'c) evalContext -> string * visibility * ('c -> 'c -> ('a, 'o) value variable list -> ('a, 'o) value variable))
     | ClassAbstractMethod of (string * bool * visibility * string list)
 
-let makeFunction localContext argConf compiledCode argVars =
+let makeFunction localContext returnByRef argConf compiledCode argVars =
     let assignParam localContext (name, byRef) var =
         if byRef then
             localContext#vars#replace name var
@@ -90,14 +90,14 @@ let makeFunction localContext argConf compiledCode argVars =
     in
     List.iter2 (assignParam localContext) argConf argVars;
     match compiledCode localContext with
-        | Return v -> v
+        | Return v -> if returnByRef then v else new variable v#get
         | _ -> new variable `Null
 
-let functionDef name argConf compiledCode =
+let functionDef name returnByRef argConf compiledCode =
     fun (context:(_,_,_) evalContext) ->
         let f argVars =
             let localContext = context#functionScope () in
-            makeFunction localContext argConf compiledCode argVars
+            makeFunction localContext returnByRef argConf compiledCode argVars
         in context#functions#add name f; NoOp
 
 let classDef className isStatic isAbstract isFinal isInterface parentName implementsNames constants properties methods staticMethods abstractMethods =
@@ -134,10 +134,10 @@ class compiler
     method compileStmt compileContext s =
         match s with
         | IgnoreResult e -> let ce = self#compileExpr compileContext e in fun context -> let _ = ce context in NoOp
-        | Language.Ast.Return e -> let ce = self#compileExpr compileContext e in fun context -> Return (new variable (ce context))
+        | Language.Ast.Return e -> let ce = self#compileExprVar compileContext e in fun context -> Return (ce context)
         | Language.Ast.Break i -> fun context -> Break i
         | Language.Ast.Continue i -> fun context -> Continue i
-        | FunctionDef (name, argConf, code) ->
+        | FunctionDef (name, returnByRef, argConf, code) ->
             let fullFunctionName =
                 if compileContext#getNamespace = "" then
                     name
@@ -145,7 +145,7 @@ class compiler
                     compileContext#getNamespace ^ "\\" ^ name
             in
             let compiledCode = self#compileStmtList (compileContext#setFunction fullFunctionName) code in
-            functionDef name argConf compiledCode
+            functionDef name returnByRef argConf compiledCode
         | ClassDef (className, isStatic, isAbstract, isFinal, isInterface, parentName, implementsNames, contents) ->
             let fullClassName =
                 if compileContext#getNamespace = "" then
@@ -269,14 +269,14 @@ class compiler
                 | None -> fun context -> `Null
                 | Some i -> self#compileExpr compileContext i
             in ClassProperty (fun context -> (name, isStatic, visibility, inited context))
-        | MethodDef (name, isStatic, visibility, argConf, code) ->
+        | MethodDef (name, isStatic, returnByRef, visibility, argConf, code) ->
             begin match isStatic with
             | true ->
                 let compiledCode = self#compileStmtList (compileContext#setMethod name) code in
                 ClassStaticMethod (fun context ->
                     let f inClass finalClass argVars =
                         let localContext = context#functionScope ~callingClass:inClass ~staticClass:finalClass () in
-                        makeFunction localContext argConf compiledCode argVars
+                        makeFunction localContext returnByRef argConf compiledCode argVars
                     in
                     (name, visibility, f)
                 )
@@ -285,7 +285,7 @@ class compiler
                 ClassMethod (fun context ->
                     let f inClass obj argVars =
                         let localContext = context#functionScope ~callingClass:inClass ~obj () in
-                        makeFunction localContext argConf compiledCode argVars
+                        makeFunction localContext returnByRef argConf compiledCode argVars
                     in
                     (name, visibility, f)
                 )
@@ -332,9 +332,9 @@ class compiler
         | ConcatList l ->
             let compiledExprs = List.map (self#compileExpr compileContext) l in
             fun context -> `String (String.concat "" (List.map (fun ce -> let `String s = to_string (ce context) in s) compiledExprs))
-        | Assignable a ->
-            let ca = self#compileAssignable compileContext a in
-            fun context -> (ca context)#get
+        | Assignable _ ->
+            let f = self#compileExprVar compileContext e in
+            fun context -> (f context)#get
         | This -> fun context -> `Object (getSome context#obj)
         | BinaryOperation (op, f, g) ->
             let cf = self#compileExpr compileContext f in
@@ -374,29 +374,20 @@ class compiler
             let cf = self#compileExpr compileContext f in
             let cg = self#compileExpr compileContext g in
             fun context -> `Bool (Expression.compare_all op (cf context) (cg context))
-        | Closure (argConf, uses, code) ->
+        | Closure (returnByRef, argConf, uses, code) ->
             let compiledCode = self#compileStmtList compileContext code in
             fun context ->
                 let f argVars =
                     let localContext = context#functionScope () in
                     List.iter (fun (name, byRef) -> localContext#vars#addFromParent ~byRef name) uses;
-                    makeFunction localContext argConf compiledCode argVars
+                    makeFunction localContext returnByRef argConf compiledCode argVars
                 in context#newClosure f
-        | FunctionCall (name, argValues) ->
-            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
-            fun context ->
-                let var = context#functions#exec
-                    (context#resolveNamespace ~fallbackTest:(context#functions#has) name)
-                    (List.map (fun cf -> cf context) compiledArgs)
-                in var#get
-        | Invoke (e, argValues) ->
-            let ce = self#compileExpr compileContext e in
-            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
-            fun context ->
-                begin match ce context with
-                | `Object o -> ((o#getObjectMethod None "__invoke") (List.map (fun cf -> cf context) compiledArgs))#get
-                | _ -> failwith "not a closure"
-                end
+        | FunctionCall (_,_) ->
+            let f = self#compileExprVar compileContext e in
+            fun context -> (f context)#get
+        | Invoke (_,_) ->
+            let f = self#compileExprVar compileContext e in
+            fun context -> (f context)#get
         | Language.Ast.ClassConstant (classRef, constantName) ->
             fun context -> let phpClass = match classRef with
                 | ClassName className -> context#classes#get (context#resolveNamespace className)
@@ -404,31 +395,12 @@ class compiler
                 | Parent -> getSome (getSome context#callingClass)#parent
                 | Static -> getSome context#staticClass
             in phpClass#getClassConstant constantName
-        | MethodCall (obj, methodName, argValues) ->
-            let cobj = self#compileExpr compileContext obj in
-            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
-            fun context -> begin match cobj context with
-                | `Object o -> (o#getObjectMethod context#callingClass methodName (List.map (fun cf -> cf context) compiledArgs))#get
-                | _ -> raise BadType
-            end
-        | StaticMethodCall (classRef, methodName, argValues) -> begin
-            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
-            fun context ->
-                let (phpClass, staticClass) = match classRef with
-                    | ClassName className -> let c = context#classes#get (context#resolveNamespace className) in (c, c)
-                    | Self -> getSome context#callingClass, (if context#obj <> None then (getSome context#obj)#objectClass else getSome context#staticClass)
-                    | Parent -> getSome (getSome context#callingClass)#parent, (if context#obj <> None then (getSome context#obj)#objectClass else getSome context#staticClass)
-                    | Static -> getSome context#staticClass, getSome context#staticClass
-                in
-                let m = if context#obj <> None && (getSome context#obj)#objectClass#instanceOf phpClass then
-                    try
-                        phpClass#getClassMethod context#callingClass methodName (getSome context#obj)
-                    with
-                        | Not_found -> phpClass#getClassStaticMethod context#callingClass methodName staticClass
-                else
-                    phpClass#getClassStaticMethod context#callingClass methodName staticClass
-                in (m (List.map (fun cf ->cf context) compiledArgs))#get
-            end
+        | MethodCall (_,_,_) ->
+            let f = self#compileExprVar compileContext e in
+            fun context -> (f context)#get
+        | StaticMethodCall (_,_,_) ->
+            let f = self#compileExprVar compileContext e in
+            fun context -> (f context)#get
         | ArrayConstructor l ->
             let compiledL = List.map (fun (e1, e2) -> ((match e1 with None -> None | Some e1 -> Some (self#compileExpr compileContext e1)), self#compileExpr compileContext e2)) l in
             fun context ->
@@ -464,11 +436,11 @@ class compiler
                     in cav context var
                 end;
                 value
-        | AssignByRef (a, b) ->
+        | AssignByRef (a, e) ->
             let cav = self#compileAssignVar compileContext a in
-            let cb = self#compileAssignable compileContext b in
+            let ce = self#compileExprVar compileContext e in
             fun context ->
-                let var = cb context in
+                let var = ce context in
                 cav context var;
                 var#get
         | BinaryAssign (op, a, f) -> self#compileExpr compileContext (Assign (a, BinaryOperation (op, Assignable a, f)))
@@ -490,6 +462,46 @@ class compiler
         | Assignable a ->
             let ca = self#compileAssignable compileContext a in
                 fun context -> ca context
+        | FunctionCall (name, argValues) ->
+            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
+            fun context ->
+                let var = context#functions#exec
+                    (context#resolveNamespace ~fallbackTest:(context#functions#has) name)
+                    (List.map (fun cf -> cf context) compiledArgs)
+                in var
+        | Invoke (e, argValues) ->
+            let ce = self#compileExpr compileContext e in
+            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
+            fun context ->
+                begin match ce context with
+                | `Object o -> ((o#getObjectMethod None "__invoke") (List.map (fun cf -> cf context) compiledArgs))
+                | _ -> failwith "not a closure"
+                end
+        | MethodCall (obj, methodName, argValues) ->
+            let cobj = self#compileExpr compileContext obj in
+            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
+            fun context -> begin match cobj context with
+                | `Object o -> (o#getObjectMethod context#callingClass methodName (List.map (fun cf -> cf context) compiledArgs))
+                | _ -> raise BadType
+            end
+        | StaticMethodCall (classRef, methodName, argValues) -> begin
+            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
+            fun context ->
+                let (phpClass, staticClass) = match classRef with
+                    | ClassName className -> let c = context#classes#get (context#resolveNamespace className) in (c, c)
+                    | Self -> getSome context#callingClass, (if context#obj <> None then (getSome context#obj)#objectClass else getSome context#staticClass)
+                    | Parent -> getSome (getSome context#callingClass)#parent, (if context#obj <> None then (getSome context#obj)#objectClass else getSome context#staticClass)
+                    | Static -> getSome context#staticClass, getSome context#staticClass
+                in
+                let m = if context#obj <> None && (getSome context#obj)#objectClass#instanceOf phpClass then
+                    try
+                        phpClass#getClassMethod context#callingClass methodName (getSome context#obj)
+                    with
+                        | Not_found -> phpClass#getClassStaticMethod context#callingClass methodName staticClass
+                else
+                    phpClass#getClassStaticMethod context#callingClass methodName staticClass
+                in (m (List.map (fun cf ->cf context) compiledArgs))
+            end
         | _ ->
             let ce = self#compileExpr compileContext e in
             fun context -> new variable (ce context)

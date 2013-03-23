@@ -120,7 +120,8 @@ control_stmt:
     | T_INLINE_HTML  { Ast.Echo (Ast.ConstValue (`String $1)) }
     | expr TT_SEMI_COLON		{ Ast.IgnoreResult ($1) }
     | T_RETURN expr TT_SEMI_COLON       { Ast.Return ($2) }
-    | T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, $4, $7) }
+    | T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, false, $4, $7) }
+    | T_FUNCTION TT_BITWISE_AND T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($3, true, $5, $8) }
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE control_stmt_list { make_if_else $3 $5 $6 $8 }
     | T_WHILE TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list { Ast.While ($3, $5) }
     | T_FOR TT_LEFT_PAR argument_call_list TT_SEMI_COLON argument_call_list TT_SEMI_COLON argument_call_list TT_RIGHT_PAR control_stmt_list { Ast.For ($3, $5, $7, $9) }
@@ -177,8 +178,10 @@ class_def_content:
     | T_CONST T_STRING TT_EQUAL expr TT_SEMI_COLON { Ast.ConstantDef ($2, $4) }
     | class_content_modifiers T_VARIABLE TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, None) }
     | class_content_modifiers T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, Some $4) }
-    | class_content_modifiers T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { let vis, isStatic = $1 in Ast.MethodDef ($3, isStatic, vis, $5, $8) }
-
+    | class_content_modifiers T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { let vis, isStatic = $1 in Ast.MethodDef ($3, isStatic, false, vis, $5, $8) }
+    | class_content_modifiers T_FUNCTION TT_BITWISE_AND T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { let vis, isStatic = $1 in Ast.MethodDef ($4, isStatic, true, vis, $6, $9) }
 
 argument_definition_list:
       { [] }
@@ -239,8 +242,10 @@ expr:
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
     | T_STRING { Ast.Constant $1 }
     
-    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure ($3, [], $6) }
-    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure ($3, $7, $10) }
+    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (false, $3, [], $6) }
+    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (false, $3, $7, $10) }
+    | T_FUNCTION TT_BITWISE_AND TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (true, $4, [], $7) }
+    | T_FUNCTION TT_BITWISE_AND TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (true, $4, $8, $11) }
     | T_VARIABLE TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.Invoke (Ast.Assignable(Ast.Variable $1), $3) }
     
     | expr TT_PLUS expr { Ast.BinaryOperation(Ast.Plus, $1, $3) }
@@ -270,7 +275,7 @@ expr:
     | expr T_IS_NOT_IDENTICAL expr { Ast.Comparison (Ast.NotIdentical, $1, $3) }
     
     | assignable TT_EQUAL expr { Ast.Assign ($1, $3) }
-    | assignable TT_EQUAL TT_BITWISE_AND assignable { Ast.AssignByRef ($1, $4) }
+    | assignable TT_EQUAL TT_BITWISE_AND expr { Ast.AssignByRef ($1, $4) }
     | assignable T_PLUS_EQUAL expr { Ast.BinaryAssign (Ast.Plus, $1, $3) }
     | assignable T_MINUS_EQUAL expr { Ast.BinaryAssign (Ast.Minus, $1, $3) }
     | assignable T_MUL_EQUAL expr { Ast.BinaryAssign (Ast.Mult, $1, $3) }

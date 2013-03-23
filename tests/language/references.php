@@ -18,3 +18,13 @@ $c = 3;
 incr($c);
 echo $c . "\n";
 
+function &getRow(&$a, $k) {
+    return $a[$k];
+}
+
+$d = array(1, 2);
+$e =& getRow($d, 0);
+$e = 2;
+
+echo $d[0] . "\n";
+
