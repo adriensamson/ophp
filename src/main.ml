@@ -1,5 +1,5 @@
 let main () =
-    let self = Sys.executable_name in
+    let self = FileUtil.readlink Sys.executable_name in
     let baseDir = String.sub self 0 (String.rindex self '/') in
     Interpreter.Main.addExtension (baseDir ^ "/extensions/core/misc.cmo");
     Interpreter.Main.addExtension (baseDir ^ "/extensions/core/closure.cmo");
