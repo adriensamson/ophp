@@ -25,10 +25,14 @@ class ['v] variableRegistry =
             {< globalScope = if globalScope = None then Some self else globalScope;
             parentScope = Some self;
             variables = Hashtbl.create 10 >}
-        method addFromParent name =
+        method addFromParent ?(byRef=false) name =
             match parentScope with
             | None -> failwith "No parent scope"
-            | Some p -> (self#find name)#set (p#find name)#get
+            | Some p ->
+                if byRef then
+                    self#replace name (p#find name)
+                else
+                    (self#find name)#set (p#find name)#get
         method addFromGlobal name =
             match globalScope with
             | None -> failwith "No global scope"

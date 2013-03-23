@@ -8,10 +8,10 @@ class ['v] constantRegistry =
         method has name = Hashtbl.mem constants name
     end
 
-class ['v] functionRegistry =
+class ['var] functionRegistry =
     object
         val functions = Hashtbl.create 10
-        method add (name : string) (f : 'v list -> 'v) =
+        method add (name : string) (f : 'var list -> 'var) =
             Hashtbl.add functions name f
         method exec name argValues =
             let f = Hashtbl.find functions name in

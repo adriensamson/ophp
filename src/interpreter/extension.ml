@@ -3,7 +3,7 @@ let registeredExtensions = Hashtbl.create 10
 let register
     (name : string)
     (constants: (string * (('v PhpArray.phpArray as 'a, 'v Object.phpObject as 'o) Language.Typing.value as 'v)) list)
-    (functions : (string * (('a, 'o, 'c) Compiler.evalContext -> 'v list -> 'v)) list)
+    (functions : (string * (('a, 'o, 'c) Compiler.evalContext -> (<get : 'v; set: 'v -> unit> as 'var) list -> 'var)) list)
     (classes : (string * ('v Object.phpClass as 'c)) list)
     (initializers : (('a, 'o, 'c) Compiler.evalContext -> unit) list)
     =

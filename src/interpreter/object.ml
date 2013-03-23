@@ -47,8 +47,8 @@ class ['v] phpClass
     (implements : 'v phpClass list)
     (constantsL : (string * 'v) list)
     (propertiesL : (string * bool * Language.Typing.visibility * 'v) list)
-    (methodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpObject -> 'v list -> 'v)) list)
-    (staticMethodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpClass -> 'v list -> 'v)) list)
+    (methodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpObject -> 'v variable list -> 'v variable)) list)
+    (staticMethodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpClass -> 'v variable list -> 'v variable)) list)
     (abstractMethods : (string * bool * Language.Typing.visibility * string list) list)
     = object (self)
     

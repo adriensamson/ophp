@@ -44,7 +44,7 @@ type expr =
     | Constant of string
     | ConcatList of  expr list
     | Assignable of  assignable
-    | Closure of string list* string list * stmt list
+    | Closure of (string * bool) list * (string * bool) list * stmt list
     | This
     | FunctionCall of name *  expr list
     | Invoke of expr * expr list
@@ -79,7 +79,7 @@ and  stmt =
     | Echo of  expr
     | Return of  expr
     | IgnoreResult of  expr
-    | FunctionDef of string * string list *  stmt list
+    | FunctionDef of string * (string * bool) list *  stmt list
     | ClassDef of string * bool * bool * bool * bool * string option * string list *  classDefElement list (* name, isStatic, isAbstract, isFinal, isInterface, parent, implements, content *)
     | If of  expr *  stmt list
     | IfElse of  expr *  stmt list *  stmt list
@@ -91,7 +91,7 @@ and  stmt =
 and  classDefElement =
     | ConstantDef of string *  expr
     | PropertyDef of string * bool * Typing.visibility *  expr option
-    | MethodDef of string * bool * Typing.visibility * string list *  stmt list
+    | MethodDef of string * bool * Typing.visibility * (string * bool) list *  stmt list
     | AbstractMethodDef of string * bool * Typing.visibility * string list
 
 type namespaceStmt =

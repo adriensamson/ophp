@@ -87,18 +87,23 @@ let rec compare_all op val1 val2 = match op with
             | Greater -> cc > 0
             | NotEqual | NotIdentical | Identical -> assert false
 
+class type ['v] variable = object
+    method get: 'v
+    method set: 'v -> unit
+    end
+
 class type ['v] variableRegistry = object
-    method replace : string -> <get : 'v; set : 'v -> unit > -> unit
-    method find : string -> <get : 'v; set : 'v -> unit >
+    method replace : string -> 'v variable -> unit
+    method find : string -> 'v variable
     method newScope : unit -> 'v variableRegistry
-    method addFromParent : string -> unit
+    method addFromParent : ?byRef:bool -> string -> unit
     method addFromGlobal : string -> unit
     end
 
 class ['a, 'o, 'c] evalContext
     (constants : ('a, 'o) value Registry.constantRegistry)
     (vars : ('a, 'o) value variableRegistry)
-    (functions : ('a, 'o) value Registry.functionRegistry)
+    (functions : ('a, 'o) value variable Registry.functionRegistry)
     (classes : 'c Registry.classRegistry)
     (files : ('a, 'o) value Registry.fileRegistry)
     (obj: 'o option)
@@ -113,7 +118,7 @@ class ['a, 'o, 'c] evalContext
     val staticClass = staticClass
     val namespace = namespace
     val namespaceUses = namespaceUses
-    val mutable closureFactory = ((fun _ -> failwith "No closure factory") : (((('a, 'o) value as 'v) list) -> 'v) -> 'v)
+    val mutable closureFactory = ((fun _ -> failwith "No closure factory") : (((('a, 'o) value as 'v) variable list) -> 'v variable) -> 'v)
     method constants = constants
     method vars = vars
     method functions = functions

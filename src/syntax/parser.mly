@@ -184,8 +184,8 @@ argument_definition_list:
       { [] }
     | argument_definition_tail { $1 }
 argument_definition_tail:
-    | identifier { [$1] }
-    | identifier TT_COMMA argument_definition_tail { $1::$3 }
+    | identifier { [($1, false)] }
+    | identifier TT_COMMA argument_definition_tail { ($1, false)::$3 }
 
 identifier:
       T_VARIABLE { $1 }
