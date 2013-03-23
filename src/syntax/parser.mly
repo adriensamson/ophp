@@ -185,7 +185,9 @@ argument_definition_list:
     | argument_definition_tail { $1 }
 argument_definition_tail:
     | identifier { [($1, false)] }
+    | TT_BITWISE_AND identifier { [($2, true)] }
     | identifier TT_COMMA argument_definition_tail { ($1, false)::$3 }
+    | TT_BITWISE_AND identifier TT_COMMA argument_definition_tail { ($2, true)::$4 }
 
 identifier:
       T_VARIABLE { $1 }
