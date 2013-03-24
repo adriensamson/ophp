@@ -234,12 +234,11 @@ assignable:
     | fluent TT_LEFT_BRACKET expr TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, Some $3) }
     | fluent TT_LEFT_BRACKET TT_RIGHT_BRACKET { Ast.ArrayOffset ($1, None) }
     | fluent T_OBJECT_OPERATOR T_STRING { Ast.Property ($1, $3) }
-    | T_THIS T_OBJECT_OPERATOR T_STRING { Ast.Property (Ast.This, $3) }
 
 fluent:
     | assignable { Ast.Assignable $1 }
     | fluent T_OBJECT_OPERATOR T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.MethodCall ($1, $3, $5) }
-    | T_THIS T_OBJECT_OPERATOR T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.MethodCall (Ast.This, $3, $5) }
+    | T_THIS { Ast.This }
 
 double_quoted_content_list:
       { [] }
