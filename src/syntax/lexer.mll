@@ -128,7 +128,7 @@ and token = parse
     | '.' { TT_CONCAT }
     | '=' { TT_EQUAL }
     | '?' { TT_INTEROGATION }
-    | ':' { TT_DOUBLE_COLON }
+    | ':' { TT_COLON }
     | '|' { TT_BITWISE_OR }
     | '^' { TT_BITWISE_XOR }
     | '&' { TT_BITWISE_AND }

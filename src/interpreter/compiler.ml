@@ -393,6 +393,13 @@ class compiler
             let cf = self#compileExpr compileContext f in
             let cg = self#compileExpr compileContext g in
             fun context -> `Bool (Expression.compare_all op (cf context) (cg context))
+        | TertiaryOperator (e1, e2, e3) ->
+            let ce1 = self#compileExpr compileContext e1 in
+            let ce2 = self#compileExpr compileContext e2 in
+            let ce3 = self#compileExpr compileContext e3 in
+            fun context ->
+                let `Bool cond = to_bool (ce1 context) in
+                if cond then ce2 context else ce3 context
         | Closure (returnByRef, argConf, uses, code) ->
             let compiledCode = self#compileStmtList compileContext code in
             let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in

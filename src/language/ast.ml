@@ -63,6 +63,7 @@ type expr =
     | Or of  expr *  expr
     | Xor of  expr *  expr
     | Not of  expr
+    | TertiaryOperator of expr * expr * expr
     | Assign of  assignable *  expr
     | AssignByRef of assignable * expr
     | BinaryAssign of binaryOperator *  assignable *  expr
