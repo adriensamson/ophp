@@ -15,6 +15,7 @@ type 'v exec_return =
     | Return of 'v variable
     | Break of int
     | Continue of int
+    | Exception of 'v
 
 class type ['v] variableRegistry
 = object
@@ -135,6 +136,15 @@ let is_break op = match op with Break _ -> true | _ -> false
 let getSome o = match o with
     | None -> assert false
     | Some a -> a
+
+let rec fold_until f g l acc = match l with
+    | [] -> acc
+    | a::s ->
+        let result = f a acc in
+        if g result then
+            result
+        else
+            fold_until f g s result
 
 class compiler
     = object (self)
@@ -263,7 +273,29 @@ class compiler
                 end
                 | _ -> raise NotTraversable
             end
-    
+        | Throw e ->
+            let ce = self#compileExpr compileContext e in
+            fun context ->
+                begin match ce context with
+                | `Object o as v when o#instanceOf (context#classes#get "Exception") -> Exception v
+                | _ -> failwith "must throw an exception"
+                end
+        | TryCatch (code, catches) ->
+            let compiledCode = self#compileStmtList compileContext code in
+            let compiledCatches = List.map (fun (cn, vn, code) -> (cn, vn, self#compileStmtList compileContext code)) catches in
+            fun context ->
+                match compiledCode context with
+                | Exception (`Object o) as e -> begin
+                    let f = fun (cn, vn, ccode) (e, catched) ->
+                        if o#instanceOf (context#classes#get (context#resolveNamespace cn)) then
+                            ((context#vars#find vn)#set (`Object o); ccode context, true)
+                        else
+                            (e, false)
+                    in
+                    let r, _ = fold_until f (fun (_, b) -> b) compiledCatches (e, false) in
+                    r
+                    end
+                | r -> r
     method compileClassContentList compileContext l =
         match l with
         | [] -> ([], [], [], [], [])

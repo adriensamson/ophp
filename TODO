@@ -12,6 +12,7 @@
 * exceptions / errors
 * constants-namespaces interaction
 * resource type
+* list() assignment
 
 == Refactoring ==
 * refactor expression

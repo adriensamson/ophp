@@ -94,6 +94,8 @@ and  stmt =
     | Foreach of  expr * string option * string *  stmt list
     | Break of int
     | Continue of int
+    | Throw of expr
+    | TryCatch of stmt list * (name * string * stmt list) list
 and  classDefElement =
     | ConstantDef of string *  expr
     | PropertyDef of string * bool * Typing.visibility *  expr option

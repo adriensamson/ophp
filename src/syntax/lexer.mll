@@ -207,6 +207,9 @@ and token = parse
     | "require_once" { T_REQUIRE_ONCE }
     | "namespace" { T_NAMESPACE }
     | "use" { T_USE }
+    | "throw" { T_THROW }
+    | "try" { T_TRY }
+    | "catch" { T_CATCH }
     
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }

@@ -20,7 +20,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token T_ECHO T_FUNCTION T_GLOBAL T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE T_PARENT T_SELF T_THIS T_CONST T_INCLUDE T_INCLUDE_ONCE T_REQUIRE T_REQUIRE_ONCE T_NAMESPACE T_USE
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
-%token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE
+%token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE T_THROW T_TRY T_CATCH
 
 %token END
 
@@ -131,6 +131,7 @@ control_stmt:
     | T_BREAK T_LNUMBER TT_SEMI_COLON { Ast.Break $2 }
     | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }
     | T_CONTINUE T_LNUMBER TT_SEMI_COLON { Ast.Continue $2 }
+    | T_THROW expr TT_SEMI_COLON { Ast.Throw $2 }
     | class_modifiers T_CLASS T_STRING TT_LEFT_BRACE class_def_content_list TT_RIGHT_BRACE {
         let (isStatic, isAbstract, isFinal) = $1 in
         Ast.ClassDef ($3, isStatic, isAbstract, isFinal, false, None, [], $5)
@@ -139,6 +140,13 @@ control_stmt:
         let (isStatic, isAbstract, isFinal) = $1 in
         Ast.ClassDef ($3, isStatic, isAbstract, isFinal, false, Some $5, [], $7)
         }
+    | T_TRY TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE catches { Ast.TryCatch ($3, $5) }
+
+catches:
+    | catch { [$1] }
+    | catch catches { $1::$2 }
+catch:
+    | T_CATCH TT_LEFT_PAR namespaced_identifier T_VARIABLE TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { ($3, $4, $7) }
 
 stmt:
     | control_stmt { $1 }
