@@ -46,7 +46,7 @@ type constValues = [
 
 type expr =
     | ConstValue of constValues
-    | Constant of string
+    | Constant of name
     | ConcatList of  expr list
     | Assignable of  assignable
     | Closure of bool * argConf list * (string * bool) list * stmt list

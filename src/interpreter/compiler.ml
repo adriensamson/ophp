@@ -338,15 +338,15 @@ class compiler
         match e with
         | ConstValue f -> fun _ -> Expression.convertConst f
         | Constant name -> begin match name with
-            | "__LINE__" -> fun _ -> `Long 0
-            | "__FILE__" -> fun _ -> `String compileContext#getFile
-            | "__DIR__" -> fun _ -> `String compileContext#getDir
-            | "__FUNCTION__" -> fun _ -> `String compileContext#getFunction
-            | "__CLASS__" -> fun _ -> `String compileContext#getClass
-            | "__TRAIT__" -> fun _ -> `String compileContext#getTrait
-            | "__METHOD__" -> fun _ -> `String compileContext#getMethod
-            | "__NAMESPACE__" -> fun _ -> `String compileContext#getNamespace
-            | _ -> fun context -> context#constants#get name
+            | RelativeName ([], "__LINE__") -> fun _ -> `Long 0
+            | RelativeName ([], "__FILE__") -> fun _ -> `String compileContext#getFile
+            | RelativeName ([], "__DIR__") -> fun _ -> `String compileContext#getDir
+            | RelativeName ([], "__FUNCTION__") -> fun _ -> `String compileContext#getFunction
+            | RelativeName ([], "__CLASS__") -> fun _ -> `String compileContext#getClass
+            | RelativeName ([], "__TRAIT__") -> fun _ -> `String compileContext#getTrait
+            | RelativeName ([], "__METHOD__") -> fun _ -> `String compileContext#getMethod
+            | RelativeName ([], "__NAMESPACE__") -> fun _ -> `String compileContext#getNamespace
+            | _ -> fun (context: (_,_,_) evalContext) -> context#constants#get (context#resolveNamespace name)
             end
         | ConcatList l ->
             let compiledExprs = List.map (self#compileExpr compileContext) l in

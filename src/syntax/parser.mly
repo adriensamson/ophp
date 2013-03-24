@@ -256,7 +256,7 @@ expr:
     | TT_DOUBLE_QUOTE double_quoted_content_list TT_DOUBLE_QUOTE { Ast.ConcatList $2 }
     | TT_MINUS expr %prec UNARY_MINUS { Ast.UnaryMinus $2 }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
-    | T_STRING { Ast.Constant $1 }
+    | namespaced_identifier { Ast.Constant $1 }
     
     | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
         { Ast.Closure (false, $3, [], $6) }
