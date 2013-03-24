@@ -136,6 +136,7 @@ and ['v] phpObject
         val properties = Hashtbl.create 10;
         
         method objectClass = objectClass
+        method instanceOf = objectClass#instanceOf
         
         method findProperty prop =
             Hashtbl.find properties prop

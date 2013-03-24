@@ -187,10 +187,24 @@ argument_definition_list:
       { [] }
     | argument_definition_tail { $1 }
 argument_definition_tail:
+    | type_hint identifier { [($2, false, $1)] }
+    | type_hint TT_BITWISE_AND identifier { [($3, true, $1)] }
+    | type_hint identifier TT_COMMA argument_definition_tail { ($2, false, $1)::$4 }
+    | type_hint TT_BITWISE_AND identifier TT_COMMA argument_definition_tail { ($3, true, $1)::$5 }
+
+type_hint:
+    | { Ast.NoTypeHint }
+    | T_ARRAY { Ast.ArrayTypeHint }
+    | namespaced_identifier { Ast.ClassTypeHint $1 }
+
+closure_use_list:
+      { [] }
+    | closure_use_tail { $1 }
+closure_use_tail:
     | identifier { [($1, false)] }
     | TT_BITWISE_AND identifier { [($2, true)] }
-    | identifier TT_COMMA argument_definition_tail { ($1, false)::$3 }
-    | TT_BITWISE_AND identifier TT_COMMA argument_definition_tail { ($2, true)::$4 }
+    | identifier TT_COMMA closure_use_tail { ($1, false)::$3 }
+    | TT_BITWISE_AND identifier TT_COMMA closure_use_tail { ($2, true)::$4 }
 
 identifier:
       T_VARIABLE { $1 }
@@ -242,10 +256,14 @@ expr:
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
     | T_STRING { Ast.Constant $1 }
     
-    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (false, $3, [], $6) }
-    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (false, $3, $7, $10) }
-    | T_FUNCTION TT_BITWISE_AND TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (true, $4, [], $7) }
-    | T_FUNCTION TT_BITWISE_AND TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.Closure (true, $4, $8, $11) }
+    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { Ast.Closure (false, $3, [], $6) }
+    | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR closure_use_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { Ast.Closure (false, $3, $7, $10) }
+    | T_FUNCTION TT_BITWISE_AND TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { Ast.Closure (true, $4, [], $7) }
+    | T_FUNCTION TT_BITWISE_AND TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR T_USE TT_LEFT_PAR closure_use_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { Ast.Closure (true, $4, $8, $11) }
     | T_VARIABLE TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.Invoke (Ast.Assignable(Ast.Variable $1), $3) }
     
     | expr TT_PLUS expr { Ast.BinaryOperation(Ast.Plus, $1, $3) }

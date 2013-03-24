@@ -77,17 +77,26 @@ type ('a, 'o, 'c) compileClassContent =
     | ClassStaticMethod of (('a, 'o, 'c) evalContext -> string * visibility * ('c -> 'c -> ('a, 'o) value variable list -> ('a, 'o) value variable))
     | ClassAbstractMethod of (string * bool * visibility * string list)
 
+let checkTypeHint (localContext : (_,_,_) evalContext) typeHint value = match typeHint, value with
+    | NoTypeHint, _
+    | ArrayTypeHint, `Array _ -> ()
+    | ClassTypeHint name, `Object o when o#instanceOf (localContext#classes#get (localContext#resolveNamespace name)) -> ()
+    | _, _ -> failwith "Bad Type hint"
+
+let assignParam localContext (name, byRef, typeHint) var =
+    if byRef then begin
+        checkTypeHint localContext typeHint var#get;
+        localContext#vars#replace name var
+    end else begin
+        let v = match var#get with
+            | `Array a -> `Array (a#copy ())
+            | a -> a
+        in
+        checkTypeHint localContext typeHint v;
+        (localContext#vars#find name)#set v
+    end
+
 let makeFunction localContext returnByRef argConf compiledCode argVars =
-    let assignParam localContext (name, byRef) var =
-        if byRef then
-            localContext#vars#replace name var
-        else
-            let v = match var#get with
-                | `Array a -> `Array (a#copy ())
-                | a -> a
-            in
-            (localContext#vars#find name)#set v
-    in
     List.iter2 (assignParam localContext) argConf argVars;
     match compiledCode localContext with
         | Return v -> if returnByRef then v else new variable v#get

@@ -9,11 +9,9 @@
 * do while
 * (switch)
 * alternative syntax if () : endif
-* pass, return by reference
 * exceptions / errors
 * constants-namespaces interaction
 * resource type
-* anonymous functions
 
 == Refactoring ==
 * refactor expression

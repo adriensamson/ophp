@@ -67,3 +67,10 @@ Test2::echoTruc();
 
 echo Test2::MY_CONST . "\n";
 
+
+function hello(Test $test, $word) {
+    $test->hello($word);
+}
+
+hello($obj2, 'Type Hint');
+
