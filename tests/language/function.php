@@ -16,3 +16,10 @@ function first(array $a) {
 
 echo first(array(1)) ."\n";
 
+function hello($hello = 'Hello') {
+    echo $hello ."\n";
+}
+
+hello('Coucou');
+hello();
+

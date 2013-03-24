@@ -36,8 +36,6 @@ type typeHint =
     | ArrayTypeHint
     | ClassTypeHint of name
 
-type argConf = string * bool * typeHint
-
 type constValues = [
     | `Null
     | `Bool of bool
@@ -100,6 +98,7 @@ and  classDefElement =
     | PropertyDef of string * bool * Typing.visibility *  expr option
     | MethodDef of string * bool * bool * Typing.visibility * argConf list *  stmt list
     | AbstractMethodDef of string * bool * Typing.visibility * string list
+and argConf = string * bool * typeHint * expr option
 
 type namespaceStmt =
     | NamespaceBlock of string list * (string list * string option) list * stmt list

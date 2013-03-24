@@ -96,8 +96,15 @@ let assignParam localContext (name, byRef, typeHint) var =
         (localContext#vars#find name)#set v
     end
 
+let rec assignParams localContext argConfs vars =
+    match argConfs, vars with
+    | (n, r, t, _)::acs, v::vs -> assignParam localContext (n, r, t) v; assignParams localContext acs vs
+    | [], _ -> ()
+    | (n, r, t, Some d)::acs, [] -> assignParam localContext (n, r, t) (new variable (d localContext)); assignParams localContext acs []
+    | (_, _, _, None)::acs, [] -> failwith "Missing arguments"
+
 let makeFunction localContext returnByRef argConf compiledCode argVars =
-    List.iter2 (assignParam localContext) argConf argVars;
+    assignParams localContext argConf argVars;
     match compiledCode localContext with
         | Return v -> if returnByRef then v else new variable v#get
         | _ -> new variable `Null
@@ -154,7 +161,8 @@ class compiler
                     compileContext#getNamespace ^ "\\" ^ name
             in
             let compiledCode = self#compileStmtList (compileContext#setFunction fullFunctionName) code in
-            functionDef name returnByRef argConf compiledCode
+            let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
+            functionDef name returnByRef compiledArgConf compiledCode
         | ClassDef (className, isStatic, isAbstract, isFinal, isInterface, parentName, implementsNames, contents) ->
             let fullClassName =
                 if compileContext#getNamespace = "" then
@@ -282,19 +290,21 @@ class compiler
             begin match isStatic with
             | true ->
                 let compiledCode = self#compileStmtList (compileContext#setMethod name) code in
+                let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
                 ClassStaticMethod (fun context ->
                     let f inClass finalClass argVars =
                         let localContext = context#functionScope ~callingClass:inClass ~staticClass:finalClass () in
-                        makeFunction localContext returnByRef argConf compiledCode argVars
+                        makeFunction localContext returnByRef compiledArgConf compiledCode argVars
                     in
                     (name, visibility, f)
                 )
             | false ->
                 let compiledCode = self#compileStmtList compileContext code in
+                let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
                 ClassMethod (fun context ->
                     let f inClass obj argVars =
                         let localContext = context#functionScope ~callingClass:inClass ~obj () in
-                        makeFunction localContext returnByRef argConf compiledCode argVars
+                        makeFunction localContext returnByRef compiledArgConf compiledCode argVars
                     in
                     (name, visibility, f)
                 )
@@ -385,11 +395,12 @@ class compiler
             fun context -> `Bool (Expression.compare_all op (cf context) (cg context))
         | Closure (returnByRef, argConf, uses, code) ->
             let compiledCode = self#compileStmtList compileContext code in
+            let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
             fun context ->
                 let f argVars =
                     let localContext = context#functionScope () in
                     List.iter (fun (name, byRef) -> localContext#vars#addFromParent ~byRef name) uses;
-                    makeFunction localContext returnByRef argConf compiledCode argVars
+                    makeFunction localContext returnByRef compiledArgConf compiledCode argVars
                 in context#newClosure f
         | FunctionCall (_,_) ->
             let f = self#compileExprVar compileContext e in
@@ -579,5 +590,11 @@ class compiler
                 | `Object o -> o#setObjectPropertyVar context#callingClass propName var
                 | _ -> raise BadType
                 end
+    method compileArgConf compileContext (name, isRef, typeHint, defaultValue) =
+        let compiledDefault = match defaultValue with
+            | None -> None
+            | Some e -> Some (self#compileExpr compileContext e)
+        in
+        (name, isRef, typeHint, compiledDefault)
 end
 

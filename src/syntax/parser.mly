@@ -183,14 +183,19 @@ class_def_content:
     | class_content_modifiers T_FUNCTION TT_BITWISE_AND T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
         { let vis, isStatic = $1 in Ast.MethodDef ($4, isStatic, true, vis, $6, $9) }
 
+is_reference:
+    | { false }
+    | TT_BITWISE_AND { true }
+default_value:
+    | { None }
+    | TT_EQUAL expr { Some $2 }
+
 argument_definition_list:
       { [] }
     | argument_definition_tail { $1 }
 argument_definition_tail:
-    | type_hint identifier { [($2, false, $1)] }
-    | type_hint TT_BITWISE_AND identifier { [($3, true, $1)] }
-    | type_hint identifier TT_COMMA argument_definition_tail { ($2, false, $1)::$4 }
-    | type_hint TT_BITWISE_AND identifier TT_COMMA argument_definition_tail { ($3, true, $1)::$5 }
+    | type_hint is_reference identifier default_value { [($3, $2, $1, $4)] }
+    | type_hint is_reference identifier default_value TT_COMMA argument_definition_tail { ($3, $2, $1, $4)::$6 }
 
 type_hint:
     | { Ast.NoTypeHint }
@@ -201,10 +206,8 @@ closure_use_list:
       { [] }
     | closure_use_tail { $1 }
 closure_use_tail:
-    | identifier { [($1, false)] }
-    | TT_BITWISE_AND identifier { [($2, true)] }
-    | identifier TT_COMMA closure_use_tail { ($1, false)::$3 }
-    | TT_BITWISE_AND identifier TT_COMMA closure_use_tail { ($2, true)::$4 }
+    | is_reference identifier { [($2, $1)] }
+    | is_reference identifier TT_COMMA closure_use_tail { ($2, $1)::$4 }
 
 identifier:
       T_VARIABLE { $1 }
