@@ -66,6 +66,7 @@ type expr =
     | TertiaryOperator of expr * expr * expr
     | Assign of  assignable *  expr
     | AssignByRef of assignable * expr
+    | ListAssign of listAssignElement list * expr
     | BinaryAssign of binaryOperator *  assignable *  expr
     | PreInc of  assignable
     | PostInc of  assignable
@@ -102,6 +103,10 @@ and  classDefElement =
     | MethodDef of string * bool * bool * Typing.visibility * argConf list *  stmt list
     | AbstractMethodDef of string * bool * Typing.visibility * string list
 and argConf = string * bool * typeHint * expr option
+and listAssignElement =
+    | LAE_None
+    | LAE_Assignable of assignable
+    | LAE_List of listAssignElement list
 
 type namespaceStmt =
     | NamespaceBlock of string list * (string list * string option) list * stmt list

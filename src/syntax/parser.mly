@@ -20,7 +20,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token T_ECHO T_FUNCTION T_GLOBAL T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE T_PARENT T_SELF T_THIS T_CONST T_INCLUDE T_INCLUDE_ONCE T_REQUIRE T_REQUIRE_ONCE T_NAMESPACE T_USE
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
-%token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE T_THROW T_TRY T_CATCH
+%token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE T_THROW T_TRY T_CATCH T_LIST
 
 %token END
 
@@ -317,6 +317,7 @@ expr:
     | assignable T_XOR_EQUAL expr { Ast.BinaryAssign (Ast.BitwiseXor, $1, $3) }
     | assignable T_SL_EQUAL expr { Ast.BinaryAssign (Ast.ShiftLeft, $1, $3) }
     | assignable T_SR_EQUAL expr { Ast.BinaryAssign (Ast.ShiftRight, $1, $3) }
+    | T_LIST TT_LEFT_PAR list_assign_elements TT_RIGHT_PAR TT_EQUAL expr { Ast.ListAssign ($3, $6) }
     
     | T_INC assignable { Ast.PreInc $2 }
     | assignable T_INC { Ast.PostInc $1 }
@@ -335,7 +336,16 @@ expr:
     | T_REQUIRE_ONCE expr { Ast.Include ($2, true, true) }
     
     | fluent { $1 }
-    
+
+list_assign_elements:
+    | list_assign_element { [$1] }
+    | list_assign_element TT_COMMA list_assign_elements { $1::$3 }
+
+list_assign_element:
+    | { Ast.LAE_None }
+    | assignable { Ast.LAE_Assignable $1 }
+    | T_LIST TT_LEFT_PAR list_assign_elements TT_RIGHT_PAR { Ast.LAE_List $3 }
+
 class_reference:
     | namespaced_identifier { Ast.ClassName $1 }
     | T_SELF { Ast.Self }

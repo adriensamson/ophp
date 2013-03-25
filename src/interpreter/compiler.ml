@@ -502,6 +502,23 @@ class compiler
                 let var = ce context in
                 cav context var;
                 var#get
+        | ListAssign (l, e) ->
+            let cl = self#compileListAssignElementList compileContext [] 0 l in
+            let ce = self#compileExpr compileContext e in
+            let rec getOffset e offsets =
+                match offsets with
+                | [] -> e
+                | i::t -> match e with
+                    | `Array a -> getOffset (a#offsetGet (string_of_int i)) t
+                    | _ -> failwith "list() assignee must be an array"
+            in
+            let doAssign context e (offsets, ca) =
+                (ca context)#set (getOffset e offsets)
+            in
+            fun context ->
+                let e = ce context in
+                List.iter (doAssign context e) cl;
+                e
         | BinaryAssign (op, a, f) -> self#compileExpr compileContext (Assign (a, BinaryOperation (op, Assignable a, f)))
         | PreInc a -> self#compileExpr compileContext (Assign (a, BinaryOperation (Plus, Assignable a, ConstValue (`Long 1))))
         | PostInc a ->
@@ -635,5 +652,14 @@ class compiler
             | Some e -> Some (self#compileExpr compileContext e)
         in
         (name, isRef, typeHint, compiledDefault)
+    method compileListAssignElementList compileContext offsets index l =
+        match l with
+        | [] -> []
+        | lae::t -> (self#compileListAssignElementList compileContext offsets (index+1) t) @ (self#compileListAssignElement compileContext (offsets@[index]) lae)
+    method compileListAssignElement compileContext offsets lae =
+        match lae with
+        | LAE_None -> []
+        | LAE_Assignable a -> [(offsets, self#compileAssignable compileContext a)]
+        | LAE_List l -> self#compileListAssignElementList compileContext offsets 0 l
 end
 

@@ -210,6 +210,7 @@ and token = parse
     | "throw" { T_THROW }
     | "try" { T_TRY }
     | "catch" { T_CATCH }
+    | "list" { T_LIST }
     
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
