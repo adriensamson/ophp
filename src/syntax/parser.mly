@@ -120,6 +120,7 @@ control_stmt:
     | T_INLINE_HTML  { Ast.Echo (Ast.ConstValue (`String $1)) }
     | expr TT_SEMI_COLON		{ Ast.IgnoreResult ($1) }
     | T_RETURN expr TT_SEMI_COLON       { Ast.Return ($2) }
+    | T_RETURN TT_SEMI_COLON       { Ast.Return (Ast.ConstValue `Null) }
     | T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($2, false, $4, $7) }
     | T_FUNCTION TT_BITWISE_AND T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { Ast.FunctionDef ($3, true, $5, $8) }
     | T_IF TT_LEFT_PAR expr TT_RIGHT_PAR control_stmt_list elseifs T_ELSE control_stmt_list { make_if_else $3 $5 $6 $8 }

@@ -4,6 +4,8 @@ let main () =
     Interpreter.Main.addExtension (baseDir ^ "/extensions/core/misc.cmo");
     Interpreter.Main.addExtension (baseDir ^ "/extensions/core/closure.cmo");
     Interpreter.Main.addExtension (baseDir ^ "/extensions/core/exception.cmo");
+    Interpreter.Main.addExtension (baseDir ^ "/extensions/core/phpString.cmo");
+    Interpreter.Main.addExtension (baseDir ^ "/extensions/core/files.cmo");
     let filename =
         if Array.length Sys.argv = 2 then
             Sys.argv.(1)

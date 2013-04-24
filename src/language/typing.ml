@@ -16,6 +16,13 @@ type ('a, 'o) value = [
     | `Object of 'o
 ]
 
+class ['a] variable (v:'a) =
+    object
+    val mutable v = v
+    method get = v
+    method set nv = v <- nv
+    end
+
 let is_numeric strict (v : (_, _) value) = match v with
     | `Null | `Bool _ -> not strict
     | `Double _ | `Long _ -> true

@@ -11,7 +11,7 @@ let register
 
 let loadExtenstionsInContext (context : (_,_,_) Compiler.evalContext) =
     let loadExtension name (constants, functions, classes, initializers) =
-        List.iter (fun (n, v) -> ()) constants;
+        List.iter (fun (n, v) -> context#constants#add n v) constants;
         List.iter (fun (n, f) -> context#functions#add n (f context)) functions;
         List.iter (fun (n, c) -> context#classes#add n c) classes;
         List.iter (fun f -> f context) initializers

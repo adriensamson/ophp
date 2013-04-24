@@ -19,7 +19,7 @@ rule() {
     clean)  ocb -clean;;
     native) ocb $TARGET.native;;
     byte)   ocb $TARGET.byte;;
-    all)    ocb $TARGET.native $TARGET.byte extensions/core/{closure,misc,exception}.cm{o,xs};;
+    all)    ocb $TARGET.native $TARGET.byte extensions/core/{closure,misc,exception,phpString,files}.cm{o,xs};;
     depend) echo "Not needed.";;
     *)      echo "Unknown action $1";;
   esac;

@@ -4,7 +4,10 @@ class ['v] constantRegistry =
         method add (name : string) (value: 'v) =
             Hashtbl.add constants name value
         method get name =
-            Hashtbl.find constants name
+            try
+                Hashtbl.find constants name
+            with
+            | Not_found -> failwith (Printf.sprintf "Constant %s not found" name)
         method has name = Hashtbl.mem constants name
     end
 
@@ -14,8 +17,11 @@ class ['var] functionRegistry =
         method add (name : string) (f : 'var list -> 'var) =
             Hashtbl.add functions name f
         method exec name argValues =
-            let f = Hashtbl.find functions name in
-            f argValues
+            try
+                let f = Hashtbl.find functions name in
+                f argValues
+            with
+            | Not_found -> failwith (Printf.sprintf "Function %s not found" name)
         method has name = Hashtbl.mem functions name
     end
 
@@ -23,7 +29,10 @@ class ['c] classRegistry =
     object
         val classes = Hashtbl.create 10
         method add (name : string) (c : 'c) =
-            Hashtbl.add classes name c
+            try
+                Hashtbl.add classes name c
+            with
+            | Not_found -> failwith (Printf.sprintf "Class %s not found" name)
         method get name = Hashtbl.find classes name
     end
 
