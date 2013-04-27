@@ -82,4 +82,6 @@ class ['v] phpArray =
         in
         Hashtbl.iter f hashTable;
         {< hashTable = newHashTable >}
+        
+        method keys = indexList
     end

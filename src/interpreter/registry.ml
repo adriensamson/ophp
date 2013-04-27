@@ -51,6 +51,7 @@ class ['v] fileRegistry
         method includeFile filename required once (exec : Language.Ast.namespaceStmt list -> 'v) =
             if not once || not (Hashtbl.mem filesOnce filename) then
                 try
+                    print_endline filename;
                     let result = exec (self#parseChannel (open_in filename)) in
                     if once then Hashtbl.replace filesOnce filename true;
                     result

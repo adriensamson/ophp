@@ -21,7 +21,10 @@ let is_dir context args =
 
 let _ = Interpreter.Extension.register
     "core/files"
-    [("DIRECTORY_SEPARATOR", `String "/")]
+    [
+        ("DIRECTORY_SEPARATOR", `String "/");
+        ("PATH_SEPARATOR", `String ":")
+    ]
     [
         ("dirname", dirname);
         ("is_file", is_file);

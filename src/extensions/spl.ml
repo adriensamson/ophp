@@ -6,6 +6,13 @@ let autoload = object (self)
     method addAutoloader c a =
         autoloaders <- autoloaders @ [(c, a)];
         c#classes#setAutoload self#autoload
+    method removeAutoloader a =
+        let rec f l = match l with
+            | [] -> []
+            | (_, b)::t when b = a -> t
+            | h::t -> h::(f t)
+        in
+        autoloaders <- f autoloaders
     method autoload name =
         let found = ref false in
         let autoloaders = ref autoloaders in
@@ -21,7 +28,10 @@ let autoload = object (self)
 let _ = Extension.register
     "spl"
     []
-    [("spl_autoload_register", fun c args -> autoload#addAutoloader c (List.hd args); new variable (`Null))]
+    [
+        ("spl_autoload_register", fun c args -> autoload#addAutoloader c (List.hd args); new variable (`Bool true));
+        ("spl_autoload_unregister", fun c args -> autoload#removeAutoloader (List.hd args); new variable (`Bool true))
+    ]
     []
     []
 
