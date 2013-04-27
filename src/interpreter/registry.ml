@@ -28,12 +28,18 @@ class ['var] functionRegistry =
 class ['c] classRegistry =
     object
         val classes = Hashtbl.create 10
-        method add (name : string) (c : 'c) =
+        val mutable autoload = fun _ -> ()
+        method setAutoload a = autoload <- a
+        method add (name : string) (c : 'c) = Hashtbl.add classes name c
+        method has name = Hashtbl.mem classes name
+        method get name =
             try
-                Hashtbl.add classes name c
+                begin if not (Hashtbl.mem classes name) then
+                    autoload name
+                end;
+                Hashtbl.find classes name
             with
             | Not_found -> failwith (Printf.sprintf "Class %s not found" name)
-        method get name = Hashtbl.find classes name
     end
 
 

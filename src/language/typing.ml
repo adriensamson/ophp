@@ -68,15 +68,11 @@ let to_bool (v : (_, _) value) = match v with
     | `String s -> `Bool (not (s = "" || s = "0"))
     | `Array _ | `Object _ -> raise BadType
 
-let to_long (v : (_, _) value) = match v with
-    | `Null -> `Long 0
-    | `Bool true -> `Long 1
-    | `Bool false -> `Long 0
+let to_long (v : (_, _) value) = match to_numeric v with
     | `Double d -> `Long (int_of_float d)
     | `Long l -> `Long l
-    | `String s ->
-        let r = Str.regexp "[0-9]+" in
-        let matches = Str.string_match r s 0 in
-        if matches then `Long (int_of_string (Str.matched_string s)) else `Long 0
-    | `Array _ | `Object _ -> raise BadType
+let to_double (v : (_, _) value) = match to_numeric v with
+    | `Double d -> `Double d
+    | `Long l -> `Double (float_of_int l)
+
 

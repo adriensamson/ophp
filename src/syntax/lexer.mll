@@ -70,7 +70,7 @@
         let f s = match Str.matched_string s with
             | "\\\\" -> "\\"
             | "\\'" -> "'"
-            | _ -> s
+            | ss -> ss
         in
         Str.global_substitute regexp f s
     

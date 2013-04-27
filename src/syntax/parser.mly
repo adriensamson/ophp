@@ -255,6 +255,15 @@ double_quoted_content_list:
     | assignable double_quoted_content_list { (Ast.Assignable $1)::$2 }
     | T_CURLY_OPEN assignable TT_RIGHT_BRACE double_quoted_content_list { (Ast.Assignable $2)::$4 }
 
+cast:
+    | T_INT_CAST { Ast.CastToLong }
+    | T_DOUBLE_CAST { Ast.CastToDouble }
+    | T_STRING_CAST { Ast.CastToString }
+    | T_ARRAY_CAST { Ast.CastToArray }
+    | T_OBJECT_CAST { Ast.CastToObject }
+    | T_BOOL_CAST { Ast.CastToBool }
+    | T_UNSET_CAST { Ast.CastToNull }
+
 expr:
       T_DNUMBER { Ast.ConstValue (`Double $1) }
     | T_LNUMBER { Ast.ConstValue (`Long $1) }
@@ -265,6 +274,7 @@ expr:
     | TT_DOUBLE_QUOTE double_quoted_content_list TT_DOUBLE_QUOTE { Ast.ConcatList $2 }
     | TT_MINUS expr %prec UNARY_MINUS { Ast.UnaryMinus $2 }
     | TT_LEFT_PAR expr TT_RIGHT_PAR { $2 }
+    | cast expr { Ast.Cast ($1, $2) }
     | namespaced_identifier { Ast.Constant $1 }
     
     | T_FUNCTION TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE

@@ -4,9 +4,10 @@ set -e
 
 cd $(dirname $0)
 
+EXTENSIONS=$(echo extensions/{core/{closure,misc,exception,phpString,files},spl}.cm{o,xs})
 TARGET=main
 FLAGS="-libs str,dynlink,unix,fileutils -cflags -I,+fileutils -lflags -I,+fileutils"
-FLAGS="$FLAGS -yaccflag -v -lflag -g"
+FLAGS="$FLAGS -yaccflag -v"
 OCAMLBUILD=ocamlbuild
 
 ocb()
@@ -19,7 +20,7 @@ rule() {
     clean)  ocb -clean;;
     native) ocb $TARGET.native;;
     byte)   ocb $TARGET.byte;;
-    all)    ocb $TARGET.native $TARGET.byte extensions/core/{closure,misc,exception,phpString,files}.cm{o,xs};;
+    all)    ocb $TARGET.native $TARGET.byte $EXTENSIONS;;
     depend) echo "Not needed.";;
     *)      echo "Unknown action $1";;
   esac;

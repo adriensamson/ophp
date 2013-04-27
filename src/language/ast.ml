@@ -44,6 +44,15 @@ type constValues = [
     | `String of string
 ]
 
+type cast =
+    | CastToLong
+    | CastToDouble
+    | CastToNull
+    | CastToBool
+    | CastToString
+    | CastToArray
+    | CastToObject
+
 type expr =
     | ConstValue of constValues
     | Constant of name
@@ -51,6 +60,7 @@ type expr =
     | Assignable of  assignable
     | Closure of bool * argConf list * (string * bool) list * stmt list
     | This
+    | Cast of cast * expr
     | FunctionCall of name *  expr list
     | Invoke of expr * expr list
     | MethodCall of  expr * string *  expr list

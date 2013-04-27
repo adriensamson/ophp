@@ -146,6 +146,19 @@ let rec fold_until f g l acc = match l with
         else
             fold_until f g s result
 
+let invoke_callable v context args = match v with
+    | `Object o -> (o#getObjectMethod None "__invoke") args
+    | `String s -> context#functions#exec s args
+    | `Array a -> begin
+        (*try*) match (a#offsetVar "0")#get, (a#offsetVar "1")#get with
+            | `String cn, `String fn -> let cl = context#classes#get cn in (cl#getClassStaticMethod None fn cl) args
+            | `Object o, `String fn -> (o#getObjectMethod None fn) args
+            | _, _ -> failwith "not a callable array"
+        (*with
+        | _ -> failwith "not an callable array"*)
+        end
+    | _ -> failwith "not a callable"
+
 class compiler
     = object (self)
     method compileStmtList (compileContext : compileContext) sl =
@@ -380,6 +393,22 @@ class compiler
             | RelativeName ([], "__NAMESPACE__") -> fun _ -> `String compileContext#getNamespace
             | _ -> fun (context: (_,_,_) evalContext) -> context#constants#get (context#resolveNamespace name)
             end
+        | Cast (ctype, e) ->
+            let ce = self#compileExpr compileContext e in
+            begin match ctype with
+                | CastToLong -> fun context -> to_long (ce context)
+                | CastToDouble -> fun context -> to_double (ce context)
+                | CastToNull -> fun context -> ignore (ce context); `Null
+                | CastToBool -> fun context -> to_bool (ce context)
+                | CastToString -> fun context -> to_string (ce context)
+                | CastToArray -> begin
+                    fun context -> match (ce context) with
+                        | `Array a -> `Array a
+                        | `Object o -> failwith "object array cast not implemented"
+                        | v -> let a = new PhpArray.phpArray in a#offsetVarSet "0" (new variable v); `Array a
+                    end
+                | CastToObject -> failwith "object cast not implemented"
+            end
         | ConcatList l ->
             let compiledExprs = List.map (self#compileExpr compileContext) l in
             fun context -> `String (String.concat "" (List.map (fun ce -> let `String s = to_string (ce context) in s) compiledExprs))
@@ -548,11 +577,7 @@ class compiler
         | Invoke (e, argValues) ->
             let ce = self#compileExpr compileContext e in
             let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
-            fun context ->
-                begin match ce context with
-                | `Object o -> ((o#getObjectMethod None "__invoke") (List.map (fun cf -> cf context) compiledArgs))
-                | _ -> failwith "not a closure"
-                end
+            fun context -> invoke_callable (ce context) context (List.map (fun cf -> cf context) compiledArgs)
         | MethodCall (obj, methodName, argValues) ->
             let cobj = self#compileExpr compileContext obj in
             let compiledArgs = List.map (self#compileExprVar compileContext) argValues in

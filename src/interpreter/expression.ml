@@ -170,7 +170,9 @@ class ['a, 'o, 'c] evalContext
 end
 
 let makeContext ?obj ?callingClass ?staticClass ?(namespace=[]) ?(namespaceUses=[]) constants vars functions classes files =
-    new evalContext constants vars functions classes files obj callingClass staticClass namespace namespaceUses
+    let c = new evalContext constants vars functions classes files obj callingClass staticClass namespace namespaceUses in
+    c#classes#setAutoload (fun name -> if c#functions#has "__autoload" then ignore (c#functions#exec "__autoload" [new variable (`String name)]) else ());
+    c
 
 let getSome o = match o with
     | None -> assert false
