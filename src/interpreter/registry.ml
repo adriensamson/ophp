@@ -48,6 +48,21 @@ class ['v] fileRegistry
     parse
     = object (self)
         val filesOnce = Hashtbl.create 10
+        val mutable includePaths = ["."]
+        method includePaths = includePaths
+        method setIncludePaths p = includePaths <- p
+        method private resolveFilename f =
+            let rec resolve paths = match paths with
+                | [] -> failwith (Printf.sprintf "File %s not found" f)
+                | p::l ->
+                    let filename = p ^ "/" ^ f in
+                    try
+                        Unix.access filename [Unix.F_OK; Unix.R_OK];
+                        filename
+                    with
+                    | Unix.Unix_error _ -> resolve l
+            in
+            resolve includePaths
         method includeFile filename required once (exec : Language.Ast.namespaceStmt list -> 'v) =
             if not once || not (Hashtbl.mem filesOnce filename) then
                 try
