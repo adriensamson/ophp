@@ -66,7 +66,8 @@ let to_bool (v : (_, _) value) = match v with
     | `Double d -> `Bool (d <> 0.)
     | `Long l -> `Bool (l <> 0)
     | `String s -> `Bool (not (s = "" || s = "0"))
-    | `Array _ | `Object _ -> raise BadType
+    | `Array a -> `Bool (a#count () > 0)
+    | `Object _ -> `Bool true
 
 let to_long (v : (_, _) value) = match to_numeric v with
     | `Double d -> `Long (int_of_float d)

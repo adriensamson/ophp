@@ -82,6 +82,8 @@ type expr =
     | PostInc of  assignable
     | PreDec of  assignable
     | PostDec of  assignable
+    | Isset of assignable
+    | Empty of assignable
     | ArrayConstructor of (expr option *  expr) list
     | NewObject of name *  expr list
     | Include of  expr * bool * bool (* filename, required, once *)

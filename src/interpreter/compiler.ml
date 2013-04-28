@@ -559,6 +559,24 @@ class compiler
             let ret = self#compileExpr compileContext (Assignable a) in
             let inc = self#compileExpr compileContext (Assign (a, BinaryOperation (Minus, Assignable a, ConstValue (`Long 1)))) in
             fun context -> let _ = inc context in ret context
+        | Isset a ->
+            let ca = self#compileAssignable compileContext a in
+            fun context ->
+                `Bool (
+                    try
+                        (ca context)#get <> `Null
+                    with
+                    | Not_found -> false
+                )
+        | Empty a ->
+            let ca = self#compileAssignable compileContext a in
+            fun context ->
+                `Bool (
+                    try
+                        let `Bool b = to_bool (ca context)#get in not b
+                    with
+                    | Not_found -> false
+                )
         | Include (filename, required, once) ->
             let cf = self#compileExpr compileContext filename in
             fun context -> let `String f = to_string (cf context) in context#files#includeFile f required once (fun l -> (self#compileFile (compileContext#setFile f) l) context)

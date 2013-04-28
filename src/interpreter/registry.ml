@@ -62,8 +62,9 @@ class ['v] fileRegistry
                     with
                     | Unix.Unix_error _ -> resolve l
             in
-            resolve includePaths
+            if f.[0] = '/' then f else resolve includePaths
         method includeFile filename required once (exec : Language.Ast.namespaceStmt list -> 'v) =
+            let filename = self#resolveFilename filename in
             if not once || not (Hashtbl.mem filesOnce filename) then
                 try
                     print_endline filename;

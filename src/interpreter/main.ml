@@ -6,7 +6,13 @@ let run filename =
         if filename = "" then
             stdin
         else
-            open_in filename
+            try
+                let dirsep = String.rindex filename '/' in
+                Unix.chdir (String.sub filename 0 dirsep);
+                print_endline (Unix.getcwd ());
+                open_in (String.sub filename (dirsep+1) ((String.length filename) - dirsep - 1))
+            with
+            | Not_found -> open_in filename
     in
     let parse chan =
         begin try

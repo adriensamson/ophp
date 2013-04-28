@@ -211,7 +211,8 @@ and token = parse
     | "try" { T_TRY }
     | "catch" { T_CATCH }
     | "list" { T_LIST }
-    
+    | "isset" { T_ISSET }
+    | "empty" { T_EMPTY }
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
     | '(' ' '* ("double"|"float") ' '* ')' { T_DOUBLE_CAST }
