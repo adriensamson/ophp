@@ -21,9 +21,10 @@ class type ['v] variableRegistry
 = object
     method replace : string -> 'v variable -> unit
     method find : string -> 'v variable
-    method newScope : unit -> 'v variableRegistry
+    method newScope : string -> 'v variableRegistry
     method addFromParent : ?byRef:bool -> string -> unit
     method addFromGlobal : string -> unit
+    method addFromStatic : string -> 'v -> unit
 end
 
 class type ['a, 'o, 'c] evalContext
@@ -38,7 +39,7 @@ class type ['a, 'o, 'c] evalContext
     method functions :('a, 'o) value variable Registry.functionRegistry
     method classes : 'c Registry.classRegistry
     method files : ('a, 'o) value Registry.fileRegistry
-    method functionScope : ?callingClass:'c -> ?obj:'o -> ?staticClass:'c -> unit -> ('a, 'o, 'c) evalContext
+    method functionScope : ?callingClass:'c -> ?obj:'o -> ?staticClass:'c -> string -> ('a, 'o, 'c) evalContext
     method namespaceScope : namespace:(string list) -> namespaceUses:((string list * string option) list) -> unit -> ('a, 'o, 'c) evalContext
     method newClosure : ((('a, 'o) value as 'v) variable list -> 'v variable) -> 'v
     method setClosureFactory : (((('a, 'o) value as 'v) variable list -> 'v variable) -> 'v) -> unit
@@ -113,7 +114,7 @@ let makeFunction localContext returnByRef argConf compiledCode argVars =
 let functionDef name returnByRef argConf compiledCode =
     fun (context:(_,_,_) evalContext) ->
         let f argVars =
-            let localContext = context#functionScope () in
+            let localContext = context#functionScope name in
             makeFunction localContext returnByRef argConf compiledCode argVars
         in context#functions#add name f; NoOp
 
@@ -198,6 +199,9 @@ class compiler
             in
             classDef fullClassName isStatic isAbstract isFinal isInterface parentName implementsNames constants properties methods staticMethods abstractMethods
         | Global name -> fun context -> context#vars#addFromGlobal name; NoOp
+        | StaticVar (name, e) ->
+            let ce = self#compileExpr compileContext e in
+            fun context -> context#vars#addFromStatic name (ce context); NoOp
         | Echo e ->
             let ce = self#compileExpr compileContext e in
             fun context ->
@@ -338,7 +342,7 @@ class compiler
                 let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
                 ClassStaticMethod (fun context ->
                     let f inClass finalClass argVars =
-                        let localContext = context#functionScope ~callingClass:inClass ~staticClass:finalClass () in
+                        let localContext = context#functionScope ~callingClass:inClass ~staticClass:finalClass compileContext#getMethod in
                         makeFunction localContext returnByRef compiledArgConf compiledCode argVars
                     in
                     (name, visibility, f)
@@ -348,7 +352,7 @@ class compiler
                 let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
                 ClassMethod (fun context ->
                     let f inClass obj argVars =
-                        let localContext = context#functionScope ~callingClass:inClass ~obj () in
+                        let localContext = context#functionScope ~callingClass:inClass ~obj compileContext#getMethod in
                         makeFunction localContext returnByRef compiledArgConf compiledCode argVars
                     in
                     (name, visibility, f)
@@ -466,7 +470,7 @@ class compiler
             let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
             fun context ->
                 let f argVars =
-                    let localContext = context#functionScope () in
+                    let localContext = context#functionScope ("Closure:" ^ string_of_int (Oo.id (object end))) in
                     List.iter (fun (name, byRef) -> localContext#vars#addFromParent ~byRef name) uses;
                     makeFunction localContext returnByRef compiledArgConf compiledCode argVars
                 in context#newClosure f

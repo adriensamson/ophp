@@ -95,9 +95,10 @@ class type ['v] variable = object
 class type ['v] variableRegistry = object
     method replace : string -> 'v variable -> unit
     method find : string -> 'v variable
-    method newScope : unit -> 'v variableRegistry
+    method newScope : string -> 'v variableRegistry
     method addFromParent : ?byRef:bool -> string -> unit
     method addFromGlobal : string -> unit
+    method addFromStatic : string -> 'v -> unit
     end
 
 class ['a, 'o, 'c] evalContext
@@ -153,9 +154,9 @@ class ['a, 'o, 'c] evalContext
             | a::p when a = alias -> parts
             | _ -> f t
         in f namespaceUses
-    method functionScope ?(callingClass: 'c option) ?(obj: 'o option) ?(staticClass: 'c option) () =
+    method functionScope ?(callingClass: 'c option) ?(obj: 'o option) ?(staticClass: 'c option) functionName =
         {<
-            vars = vars#newScope ();
+            vars = vars#newScope functionName;
             callingClass = callingClass;
             obj = obj;
             staticClass = staticClass

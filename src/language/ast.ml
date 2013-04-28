@@ -95,6 +95,7 @@ and  assignable =
     | StaticProperty of classReference * string
 and  stmt =
     | Global of string
+    | StaticVar of string * expr
     | Echo of  expr
     | Return of  expr
     | IgnoreResult of  expr

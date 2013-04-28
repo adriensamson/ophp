@@ -96,7 +96,6 @@ stmt_list:
     | stmt stmt_list { $1::$2 }
     
 control_stmt_list:
-    | TT_SEMI_COLON { [] }
     | control_stmt { [$1] }
     | TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { $2 }
 
@@ -116,8 +115,11 @@ incomplete_elseif:
 
 control_stmt:
     | T_GLOBAL T_VARIABLE TT_SEMI_COLON { Ast.Global $2 }
+    | T_STATIC T_VARIABLE TT_SEMI_COLON { Ast.StaticVar ($2, Ast.ConstValue `Null) }
+    | T_STATIC T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { Ast.StaticVar ($2, $4) }
     | T_ECHO expr TT_SEMI_COLON		{ Ast.Echo ($2) }
     | T_INLINE_HTML  { Ast.Echo (Ast.ConstValue (`String $1)) }
+    | TT_SEMI_COLON		{ Ast.IgnoreResult (Ast.ConstValue `Null) }
     | expr TT_SEMI_COLON		{ Ast.IgnoreResult ($1) }
     | T_RETURN expr TT_SEMI_COLON       { Ast.Return ($2) }
     | T_RETURN TT_SEMI_COLON       { Ast.Return (Ast.ConstValue `Null) }
