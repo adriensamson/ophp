@@ -64,7 +64,9 @@ type expr =
     | FunctionCall of name * expr list
     | Invoke of expr * expr list
     | MethodCall of expr * string * expr list
+    | VariableMethodCall of expr * expr * expr list
     | StaticMethodCall of classReference * string * expr list
+    | VariableStaticMethodCall of classReference * expr * expr list
     | ClassConstant of classReference * string
     | BinaryOperation of binaryOperator * expr * expr
     | UnaryMinus of expr

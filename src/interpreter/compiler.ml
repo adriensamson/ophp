@@ -516,7 +516,13 @@ class compiler
         | MethodCall (_,_,_) ->
             let f = self#compileExprVar compileContext e in
             fun context -> (f context)#get
+        | VariableMethodCall (_,_,_) ->
+            let f = self#compileExprVar compileContext e in
+            fun context -> (f context)#get
         | StaticMethodCall (_,_,_) ->
+            let f = self#compileExprVar compileContext e in
+            fun context -> (f context)#get
+        | VariableStaticMethodCall (_,_,_) ->
             let f = self#compileExprVar compileContext e in
             fun context -> (f context)#get
         | ArrayConstructor l ->
@@ -636,9 +642,39 @@ class compiler
                 | `Object o -> (o#getObjectMethod context#callingClass methodName (List.map (fun cf -> cf context) compiledArgs))
                 | _ -> raise BadType
             end
+        | VariableMethodCall (obj, e, argValues) ->
+            let cobj = self#compileExpr compileContext obj in
+            let ce = self#compileExpr compileContext e in
+            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
+            fun context ->
+                let `String methodName = to_string (ce context) in
+                begin match cobj context with
+                | `Object o -> (o#getObjectMethod context#callingClass methodName (List.map (fun cf -> cf context) compiledArgs))
+                | _ -> raise BadType
+            end
         | StaticMethodCall (classRef, methodName, argValues) -> begin
             let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
             fun context ->
+                let (phpClass, staticClass) = match classRef with
+                    | ClassName className -> let c = context#classes#get (context#resolveNamespace className) in (c, c)
+                    | Self -> getSome context#callingClass, (if context#obj <> None then (getSome context#obj)#objectClass else getSome context#staticClass)
+                    | Parent -> getSome (getSome context#callingClass)#parent, (if context#obj <> None then (getSome context#obj)#objectClass else getSome context#staticClass)
+                    | Static -> getSome context#staticClass, getSome context#staticClass
+                in
+                let m = if context#obj <> None && (getSome context#obj)#objectClass#instanceOf phpClass then
+                    try
+                        phpClass#getClassMethod context#callingClass methodName (getSome context#obj)
+                    with
+                        | Not_found -> phpClass#getClassStaticMethod context#callingClass methodName staticClass
+                else
+                    phpClass#getClassStaticMethod context#callingClass methodName staticClass
+                in (m (List.map (fun cf ->cf context) compiledArgs))
+            end
+        | VariableStaticMethodCall (classRef, e, argValues) -> begin
+            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
+            let ce = self#compileExpr compileContext e in
+            fun context ->
+                let `String methodName = to_string (ce context) in
                 let (phpClass, staticClass) = match classRef with
                     | ClassName className -> let c = context#classes#get (context#resolveNamespace className) in (c, c)
                     | Self -> getSome context#callingClass, (if context#obj <> None then (getSome context#obj)#objectClass else getSome context#staticClass)

@@ -258,6 +258,8 @@ assignable:
 fluent:
     | assignable { Ast.Assignable $1 }
     | fluent T_OBJECT_OPERATOR T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.MethodCall ($1, $3, $5) }
+    | fluent T_OBJECT_OPERATOR T_VARIABLE TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.VariableMethodCall ($1, Ast.Assignable (Ast.Variable $3), $5) }
+    | fluent T_OBJECT_OPERATOR T_DOLLAR_OPEN_CURLY_BRACES expr TT_RIGHT_BRACE TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.VariableMethodCall ($1, $4, $7) }
     | T_THIS { Ast.This }
 
 double_quoted_content_list:
