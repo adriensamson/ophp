@@ -19,7 +19,6 @@ let autoload = object (self)
         while not !found && !autoloaders <> [] do
             let (context, a) = List.hd !autoloaders in
             ignore (Compiler.invoke_callable a#get context [new variable (`String name)]);
-            print_endline name;
             found := context#classes#has name;
             autoloaders := List.tl !autoloaders
         done

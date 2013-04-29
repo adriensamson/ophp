@@ -641,6 +641,7 @@ class compiler
                 begin match co with
                 | None -> raise Expression.MissingArrayOffset
                 | Some co -> match ce context with
+                    | `String s -> let `Long i = to_long (co context) in new variable (`String (String.sub s i 1))
                     | `Array a -> let `String offset = to_string (co context) in a#offsetVar offset
                     | _ -> raise BadType
                 end

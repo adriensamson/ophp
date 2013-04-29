@@ -51,7 +51,7 @@ class ['v] fileRegistry
         val mutable includePaths = ["."]
         method includePaths = includePaths
         method setIncludePaths p = includePaths <- p
-        method private resolveFilename f =
+        method resolveFilename f =
             let rec resolve paths = match paths with
                 | [] -> failwith (Printf.sprintf "File %s not found" f)
                 | p::l ->
