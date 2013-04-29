@@ -1,5 +1,6 @@
 <language/*.cmx>: for-pack(Language)
 <interpreter/*.cmx>: for-pack(Interpreter)
 <syntax/*.cmx>: for-pack(Syntax)
+<extensions/core/*.cmx>: for-pack(Core)
 true: debug
 

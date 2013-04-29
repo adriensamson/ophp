@@ -4,7 +4,7 @@ set -e
 
 cd $(dirname $0)
 
-EXTENSIONS=$(echo extensions/{core/{closure,misc,exception,phpString,files,info,phpArray},spl}.cm{o,xs})
+EXTENSIONS=$(echo extensions/{core,spl}.cm{o,xs})
 TARGET=main
 FLAGS="-libs str,dynlink,unix,fileutils -cflags -I,+fileutils -lflags -I,+fileutils"
 FLAGS="$FLAGS -yaccflag -v"
