@@ -465,6 +465,13 @@ class compiler
             fun context ->
                 let `Bool cond = to_bool (ce1 context) in
                 if cond then ce2 context else ce3 context
+        | InstanceOf (e, className) ->
+            let ce = self#compileExpr compileContext e in
+            fun context -> begin
+                match ce context with
+                | `Object o -> `Bool (o#instanceOf (context#classes#get (context#resolveNamespace className)))
+                | _ -> raise BadType
+                end
         | Closure (returnByRef, argConf, uses, code) ->
             let compiledCode = self#compileStmtList compileContext code in
             let compiledArgConf = List.map (self#compileArgConf compileContext) argConf in
@@ -584,6 +591,9 @@ class compiler
         | Include (filename, required, once) ->
             let cf = self#compileExpr compileContext filename in
             fun context -> let `String f = to_string (cf context) in context#files#includeFile f required once (fun l -> (self#compileFile (compileContext#setFile f) l) context)
+        | Print e ->
+            let ce = self#compileExpr compileContext e in
+            fun context -> let `String s = to_string (ce context) in print_string s; `Long 1
     method private compileExprVar compileContext e =
         match e with
         | Assignable a ->

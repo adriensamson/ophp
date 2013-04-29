@@ -18,7 +18,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token T_INC T_DEC T_SL T_SR T_LOGICAL_OR T_LOGICAL_XOR T_LOGICAL_AND T_PLUS_EQUAL T_MINUS_EQUAL T_MUL_EQUAL T_DIV_EQUAL T_CONCAT_EQUAL T_MOD_EQUAL T_AND_EQUAL T_OR_EQUAL T_XOR_EQUAL T_SL_EQUAL T_SR_EQUAL T_BOOLEAN_OR T_BOOLEAN_AND T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_IS_GREATER_OR_EQUAL T_IS_SMALLER_OR_EQUAL T_DOUBLE_ARROW T_OBJECT_OPERATOR T_CURLY_OPEN T_DOLLAR_OPEN_CURLY_BRACES T_DOUBLE_COLON
 
-%token T_ECHO T_FUNCTION T_GLOBAL T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE T_PARENT T_SELF T_THIS T_CONST T_INCLUDE T_INCLUDE_ONCE T_REQUIRE T_REQUIRE_ONCE T_NAMESPACE T_USE
+%token T_ECHO T_PRINT T_FUNCTION T_GLOBAL T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE T_PARENT T_SELF T_THIS T_CONST T_INCLUDE T_INCLUDE_ONCE T_REQUIRE T_REQUIRE_ONCE T_NAMESPACE T_USE
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
 %token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE T_THROW T_TRY T_CATCH T_LIST T_ISSET T_EMPTY
 
@@ -45,7 +45,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 %nonassoc T_INSTANCEOF
 %right TT_TILDE T_INC T_DEC T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST TT_AT
 %left TT_LEFT_BRACKET
-%nonassoc T_CLONE T_NEW
+%nonassoc T_CLONE T_NEW T_PRINT
 
 %start everything
 %type <Language.Ast.namespaceStmt list> everything
@@ -316,6 +316,7 @@ expr:
     | expr T_IS_NOT_IDENTICAL expr { Ast.Comparison (Ast.NotIdentical, $1, $3) }
     | expr TT_INTEROGATION expr TT_COLON expr {Ast.TertiaryOperator ($1, $3, $5) }
     | expr TT_INTEROGATION TT_COLON expr {Ast.TertiaryOperator ($1, $1, $4) }
+    | expr T_INSTANCEOF namespaced_identifier { Ast.InstanceOf ($1, $3) }
     
     | assignable TT_EQUAL expr { Ast.Assign ($1, $3) }
     | assignable TT_EQUAL TT_BITWISE_AND expr { Ast.AssignByRef ($1, $4) }
@@ -341,6 +342,7 @@ expr:
     
     | namespaced_identifier TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
+    | T_NEW namespaced_identifier { Ast.NewObject ($2, []) }
     | T_NEW namespaced_identifier TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
     | class_reference T_DOUBLE_COLON T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.StaticMethodCall ($1, $3, $5) }
     | class_reference T_DOUBLE_COLON T_STRING { Ast.ClassConstant ($1, $3) }
@@ -349,6 +351,7 @@ expr:
     | T_INCLUDE_ONCE expr { Ast.Include ($2, false, true) }
     | T_REQUIRE expr { Ast.Include ($2, true, false) }
     | T_REQUIRE_ONCE expr { Ast.Include ($2, true, true) }
+    | T_PRINT expr { Ast.Print ($2) }
     
     | fluent { $1 }
 

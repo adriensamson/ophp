@@ -168,6 +168,7 @@ and token = parse
     | "=>" { T_DOUBLE_ARROW }
     
     | "echo" { T_ECHO }
+    | "print" { T_PRINT }
     | "function" { T_FUNCTION }
     | "global" { T_GLOBAL }
     | "return" { T_RETURN }

@@ -74,6 +74,7 @@ type expr =
     | Xor of  expr *  expr
     | Not of  expr
     | TertiaryOperator of expr * expr * expr
+    | InstanceOf of expr * name
     | Assign of  assignable *  expr
     | AssignByRef of assignable * expr
     | ListAssign of listAssignElement list * expr
@@ -87,6 +88,7 @@ type expr =
     | ArrayConstructor of (expr option *  expr) list
     | NewObject of name *  expr list
     | Include of  expr * bool * bool (* filename, required, once *)
+    | Print of expr
 and  assignable =
     | Variable of string
     | VariableVariable of  expr
