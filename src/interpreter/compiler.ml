@@ -290,6 +290,25 @@ class compiler
                 end
                 | _ -> raise NotTraversable
             end
+        | Switch (e, cl) -> begin
+            let ce = self#compileExpr compileContext e in
+            let ccl = List.map (fun (e, sl) -> ((match e with None -> None | Some e -> Some (self#compileExpr compileContext e)), self#compileStmtList compileContext sl)) cl in
+            fun context ->
+                let v = ce context in
+                let result = ref NoOp in
+                let cases = ref ccl in
+                while not (is_break !result) && !cases <> [] do
+                    let ce, csl = List.hd !cases in
+                    begin if match ce with None -> true | Some ce -> Expression.compare_values v (ce context) = Some 0 then
+                        result := csl context
+                    end;
+                    cases := List.tl !cases
+                done;
+                match !result with
+                | Break i when i <= 1 -> NoOp
+                | Break i -> Break (i-1)
+                | _ -> !result
+            end
         | Throw e ->
             let ce = self#compileExpr compileContext e in
             fun context ->

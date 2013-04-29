@@ -20,7 +20,7 @@ let rec make_if cond then_list elseifs = match elseifs with
 
 %token T_ECHO T_PRINT T_FUNCTION T_GLOBAL T_RETURN T_NULL T_FALSE T_TRUE T_CLONE T_NEW T_INSTANCEOF T_ARRAY T_CLASS T_EXTENDS T_ABSTRACT T_FINAL T_STATIC T_IMPLEMENTS T_INTERFACE T_PUBLIC T_PROTECTED T_PRIVATE T_PARENT T_SELF T_THIS T_CONST T_INCLUDE T_INCLUDE_ONCE T_REQUIRE T_REQUIRE_ONCE T_NAMESPACE T_USE
 %token T_INT_CAST T_DOUBLE_CAST T_STRING_CAST T_ARRAY_CAST T_OBJECT_CAST T_BOOL_CAST T_UNSET_CAST
-%token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_BREAK T_CONTINUE T_THROW T_TRY T_CATCH T_LIST T_ISSET T_EMPTY
+%token T_IF T_ELSE T_ELSEIF T_WHILE T_FOR T_FOREACH T_AS T_SWITCH T_CASE T_DEFAULT T_BREAK T_CONTINUE T_THROW T_TRY T_CATCH T_LIST T_ISSET T_EMPTY
 
 %token END
 
@@ -93,6 +93,7 @@ namespaced_identifier:
 
 stmt_list:
       { [] }
+    | TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE stmt_list { $2 @ $4 }
     | stmt stmt_list { $1::$2 }
     
 control_stmt_list:
@@ -130,6 +131,7 @@ control_stmt:
     | T_FOR TT_LEFT_PAR argument_call_list TT_SEMI_COLON argument_call_list TT_SEMI_COLON argument_call_list TT_RIGHT_PAR control_stmt_list { Ast.For ($3, $5, $7, $9) }
     | T_FOREACH TT_LEFT_PAR expr T_AS T_VARIABLE T_DOUBLE_ARROW T_VARIABLE TT_RIGHT_PAR control_stmt_list { Ast.Foreach ($3, Some $5, $7, $9) }
     | T_FOREACH TT_LEFT_PAR expr T_AS T_VARIABLE TT_RIGHT_PAR control_stmt_list { Ast.Foreach ($3, None, $5, $7) }
+    | T_SWITCH TT_LEFT_PAR expr TT_RIGHT_PAR TT_LEFT_BRACE switch_cases TT_RIGHT_BRACE { Ast.Switch ($3, $6) }
     | T_BREAK TT_SEMI_COLON { Ast.Break 1 }
     | T_BREAK T_LNUMBER TT_SEMI_COLON { Ast.Break $2 }
     | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }
@@ -150,6 +152,13 @@ catches:
     | catch catches { $1::$2 }
 catch:
     | T_CATCH TT_LEFT_PAR namespaced_identifier T_VARIABLE TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE { ($3, $4, $7) }
+
+switch_cases:
+    | { [] }
+    | switch_case switch_cases { $1::$2 }
+switch_case:
+    | T_CASE expr TT_COLON stmt_list { (Some $2, $4) }
+    | T_DEFAULT TT_COLON stmt_list { (None, $3) }
 
 stmt:
     | control_stmt { $1 }

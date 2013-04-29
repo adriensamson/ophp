@@ -56,58 +56,59 @@ type cast =
 type expr =
     | ConstValue of constValues
     | Constant of name
-    | ConcatList of  expr list
-    | Assignable of  assignable
+    | ConcatList of expr list
+    | Assignable of assignable
     | Closure of bool * argConf list * (string * bool) list * stmt list
     | This
     | Cast of cast * expr
-    | FunctionCall of name *  expr list
+    | FunctionCall of name * expr list
     | Invoke of expr * expr list
-    | MethodCall of  expr * string *  expr list
-    | StaticMethodCall of classReference * string *  expr list
+    | MethodCall of expr * string * expr list
+    | StaticMethodCall of classReference * string * expr list
     | ClassConstant of classReference * string
-    | BinaryOperation of binaryOperator *  expr *  expr
+    | BinaryOperation of binaryOperator * expr * expr
     | UnaryMinus of expr
-    | Comparison of comparisonOperator *  expr *  expr
-    | And of  expr *  expr
-    | Or of  expr *  expr
-    | Xor of  expr *  expr
-    | Not of  expr
+    | Comparison of comparisonOperator * expr * expr
+    | And of expr * expr
+    | Or of expr * expr
+    | Xor of expr * expr
+    | Not of expr
     | TertiaryOperator of expr * expr * expr
     | InstanceOf of expr * name
-    | Assign of  assignable *  expr
+    | Assign of assignable *  expr
     | AssignByRef of assignable * expr
     | ListAssign of listAssignElement list * expr
     | BinaryAssign of binaryOperator *  assignable *  expr
-    | PreInc of  assignable
-    | PostInc of  assignable
-    | PreDec of  assignable
-    | PostDec of  assignable
+    | PreInc of assignable
+    | PostInc of assignable
+    | PreDec of assignable
+    | PostDec of assignable
     | Isset of assignable
     | Empty of assignable
     | ArrayConstructor of (expr option *  expr) list
     | NewObject of name *  expr list
-    | Include of  expr * bool * bool (* filename, required, once *)
+    | Include of expr * bool * bool (* filename, required, once *)
     | Print of expr
 and  assignable =
     | Variable of string
-    | VariableVariable of  expr
-    | ArrayOffset of  expr *  expr option
-    | Property of  expr * string
+    | VariableVariable of expr
+    | ArrayOffset of expr *  expr option
+    | Property of expr * string
     | StaticProperty of classReference * string
 and  stmt =
     | Global of string
     | StaticVar of string * expr
-    | Echo of  expr
-    | Return of  expr
-    | IgnoreResult of  expr
+    | Echo of expr
+    | Return of expr
+    | IgnoreResult of expr
     | FunctionDef of string * bool * argConf list *  stmt list
-    | ClassDef of string * bool * bool * bool * bool * string option * string list *  classDefElement list (* name, isStatic, isAbstract, isFinal, isInterface, parent, implements, content *)
-    | If of  expr *  stmt list
-    | IfElse of  expr *  stmt list *  stmt list
-    | While of  expr *  stmt list
-    | For of  expr list *  expr list *  expr list *  stmt list
-    | Foreach of  expr * string option * string *  stmt list
+    | ClassDef of string * bool * bool * bool * bool * string option * string list * classDefElement list (* name, isStatic, isAbstract, isFinal, isInterface, parent, implements, content *)
+    | If of expr * stmt list
+    | IfElse of expr * stmt list *  stmt list
+    | While of expr * stmt list
+    | For of expr list * expr list * expr list * stmt list
+    | Foreach of expr * string option * string * stmt list
+    | Switch of expr * (expr option * stmt list) list
     | Break of int
     | Continue of int
     | Throw of expr

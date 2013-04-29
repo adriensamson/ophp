@@ -91,7 +91,59 @@
                 | _ -> String.make 1 (char_of_int (octalDecode (String.sub ss 1 (String.length ss - 1))))
         in
         Str.global_substitute regexp f s
-            
+        
+        let keywords = Hashtbl.create 50
+        let _ =
+            List.iter (fun (kwd, tok) -> Hashtbl.add keywords kwd tok)
+              [ ("echo", T_ECHO);
+                ("print", T_PRINT);
+                ("function", T_FUNCTION);
+                ("global", T_GLOBAL);
+                ("return", T_RETURN);
+                ("null", T_NULL);
+                ("false", T_FALSE);
+                ("true", T_TRUE);
+                ("clone", T_CLONE);
+                ("new", T_NEW);
+                ("instanceof", T_INSTANCEOF);
+                ("array", T_ARRAY);
+                ("if", T_IF);
+                ("else", T_ELSE);
+                ("elseif", T_ELSEIF);
+                ("while", T_WHILE);
+                ("for", T_FOR);
+                ("foreach", T_FOREACH);
+                ("as", T_AS);
+                ("switch", T_SWITCH);
+                ("case", T_CASE);
+                ("default", T_DEFAULT);
+                ("break", T_BREAK);
+                ("continue", T_CONTINUE);
+                ("class", T_CLASS);
+                ("extends", T_EXTENDS);
+                ("abstract", T_ABSTRACT);
+                ("final", T_FINAL);
+                ("static", T_STATIC);
+                ("implements", T_IMPLEMENTS);
+                ("interface", T_INTERFACE);
+                ("public", T_PUBLIC);
+                ("protected", T_PROTECTED);
+                ("private", T_PRIVATE);
+                ("parent", T_PARENT);
+                ("self", T_SELF);
+                ("const", T_CONST);
+                ("include", T_INCLUDE);
+                ("include_once", T_INCLUDE_ONCE);
+                ("require", T_REQUIRE);
+                ("require_once", T_REQUIRE_ONCE);
+                ("namespace", T_NAMESPACE);
+                ("use", T_USE);
+                ("throw", T_THROW);
+                ("try", T_TRY);
+                ("catch", T_CATCH);
+                ("list", T_LIST);
+                ("isset", T_ISSET);
+                ("empty", T_EMPTY) ]
 }
 let digit = ['0'-'9']
 let ident = ['a'-'z' 'A'-'Z' '_' '\x7f'-'\xff']['a'-'z' 'A'-'Z' '0'-'9' '_' '\x7f'-'\xff']*
@@ -167,53 +219,7 @@ and token = parse
     | "->" { T_OBJECT_OPERATOR }
     | "=>" { T_DOUBLE_ARROW }
     
-    | "echo" { T_ECHO }
-    | "print" { T_PRINT }
-    | "function" { T_FUNCTION }
-    | "global" { T_GLOBAL }
-    | "return" { T_RETURN }
-    | "null" { T_NULL }
-    | "false" { T_FALSE }
-    | "true" { T_TRUE }
-    | "clone" { T_CLONE }
-    | "new" { T_NEW }
-    | "instanceof" { T_INSTANCEOF }
-    | "array" { T_ARRAY }
-    | "if" { T_IF }
-    | "else" { T_ELSE }
-    | "elseif" { T_ELSEIF }
-    | "while" { T_WHILE }
-    | "for" { T_FOR }
-    | "foreach" { T_FOREACH }
-    | "as" { T_AS }
-    | "break" { T_BREAK }
-    | "continue" { T_CONTINUE }
-    | "class" { T_CLASS }
-    | "extends" { T_EXTENDS }
-    | "abstract" { T_ABSTRACT }
-    | "final" { T_FINAL }
-    | "static" { T_STATIC }
-    | "implements" { T_IMPLEMENTS }
-    | "interface" { T_INTERFACE }
-    | "public" { T_PUBLIC }
-    | "protected" { T_PROTECTED }
-    | "private" { T_PRIVATE }
-    | "parent" { T_PARENT }
-    | "self" { T_SELF }
     | "$this" { T_THIS }
-    | "const" { T_CONST }
-    | "include" { T_INCLUDE }
-    | "include_once" { T_INCLUDE_ONCE }
-    | "require" { T_REQUIRE }
-    | "require_once" { T_REQUIRE_ONCE }
-    | "namespace" { T_NAMESPACE }
-    | "use" { T_USE }
-    | "throw" { T_THROW }
-    | "try" { T_TRY }
-    | "catch" { T_CATCH }
-    | "list" { T_LIST }
-    | "isset" { T_ISSET }
-    | "empty" { T_EMPTY }
     
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
     | '(' ' '* ("double"|"float") ' '* ')' { T_DOUBLE_CAST }
@@ -231,7 +237,7 @@ and token = parse
     | "'" (('\\' _) | [^ '\\' '\''])* "'"
         as s { TT_CONSTANT_STRING (unescapeSimpleQuotes (String.sub s 1 (String.length s - 2))) }
     
-    | ident as s { T_STRING s }
+    | ident as s { try Hashtbl.find keywords s with Not_found -> T_STRING s }
     | '$' ident as s { T_VARIABLE (String.sub s 1 (String.length s - 1)) }
     | "$$" ident as s { TT_VARIABLE_VARIABLE (String.sub s 2 (String.length s - 2)) }
     | "${" { braceStack#push (); T_DOLLAR_OPEN_CURLY_BRACES }
