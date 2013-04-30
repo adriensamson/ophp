@@ -27,3 +27,19 @@ echo "$zero]\n";
 
 echo "${aze[$aze[0]]}\n";
 
+echo <<<'TEST'
+Coucou
+
+TEST;
+
+echo <<<TEST
+Coucou $zero 2
+
+TEST;
+
+echo <<<"TEST"
+Coucou $zero 3
+
+TEST;
+
+

@@ -1,11 +1,15 @@
 {
     open Parser
     
-    type currentRule = Outer | Token | InString | InStringVariableOffset
+    type currentRule = Outer | Token | InString | InStringVariableOffset of currentRule | HereDoc | NowDoc
     
     let currentRule = ref Outer
     
     let tokenBuffer = ref []
+    
+    let hereDocToken = ref None
+    let hereDocLineEnd = ref false
+    let hereDocStartLine = ref false
     
     let braceStack = object
         val mutable stack = []
@@ -18,6 +22,7 @@
     let reset () =
         currentRule := Outer;
         tokenBuffer := [];
+        hereDocToken := None;
         try
             while true do
                 braceStack#pop ()
@@ -242,6 +247,10 @@ and token = parse
     | "$$" ident as s { TT_VARIABLE_VARIABLE (String.sub s 2 (String.length s - 2)) }
     | "${" { braceStack#push (); T_DOLLAR_OPEN_CURLY_BRACES }
     
+    | "<<<'" (ident as t) "'\n" { hereDocToken := Some t; currentRule := NowDoc; T_START_HEREDOC }
+    | "<<<\"" (ident as t) "\"\n" { hereDocStartLine := true; hereDocToken := Some t; currentRule := HereDoc; T_START_HEREDOC }
+    | "<<<" (ident as t) "\n" { hereDocStartLine := true; hereDocToken := Some t; currentRule := HereDoc; T_START_HEREDOC }
+    
     | _ { token lexbuf }
     | eof { END }
     
@@ -251,7 +260,7 @@ and inString = parse
     | '$' ident '['? as s
     {
         let varName = if s.[String.length s - 1] = '[' then begin
-            currentRule := InStringVariableOffset;
+            currentRule := InStringVariableOffset !currentRule;
             tokenBuffer := [TT_LEFT_BRACKET];
             String.sub s 1 (String.length s - 2)
         end else
@@ -262,10 +271,10 @@ and inString = parse
     | ("${"|"{$") ident as s { braceStack#push (); currentRule := Token; tokenBuffer := [T_VARIABLE (String.sub s 2 (String.length s - 2))]; T_CURLY_OPEN }
     | "{${" {braceStack#push (); currentRule := Token; braceStack#push (); tokenBuffer := [T_DOLLAR_OPEN_CURLY_BRACES]; T_CURLY_OPEN }
 
-and inStringVariableOffset = parse
+and inStringVariableOffset parentRule = parse
     | '-'? digit+ ']' as s
     {
-        currentRule := InString;
+        currentRule := parentRule;
         let num = String.sub s 0 (String.length s - 1) in
         tokenBuffer := TT_RIGHT_BRACKET::!tokenBuffer;
         T_LNUMBER (int_of_string num)
@@ -281,6 +290,49 @@ and inStringVariableOffset = parse
             TT_CONSTANT_STRING off
     }
 
+and nowDoc = parse
+    | (((ident as t) (";"? as semicolon)) as s) '\n' {
+        if Some t = !hereDocToken then begin
+            currentRule := Token;
+            begin if semicolon = ";" then tokenBuffer := [TT_SEMI_COLON] end;
+            hereDocLineEnd := false;
+            T_END_HEREDOC
+        end else begin
+            let s2 = if !hereDocLineEnd then "\n" ^ s else s in hereDocLineEnd := true; TT_CONSTANT_STRING s2
+        end
+    }
+    | ([^'\n']* as s) '\n' { let s2 = if !hereDocLineEnd then "\n" ^ s else s in hereDocLineEnd := true; TT_CONSTANT_STRING s2 }
+    
+and hereDoc = parse
+    | (((ident as t) (";"? as semicolon)) as s) '\n' {
+        if !hereDocStartLine = true && Some t = !hereDocToken then begin
+            currentRule := Token;
+            begin if semicolon = ";" then tokenBuffer := [TT_SEMI_COLON] end;
+            hereDocLineEnd := false;
+            T_END_HEREDOC
+        end else begin
+            let s2 = if !hereDocLineEnd then "\n" ^ s else s in
+            hereDocStartLine := true;
+            hereDocLineEnd := true;
+            TT_CONSTANT_STRING s2
+        end
+    }
+    | ('\\' _ |[^ '\n' '\\' '$' '{']|'{'[^'$'])+ as s { hereDocStartLine := false; TT_CONSTANT_STRING (unescapeDoubleQuotes s) }
+    | '$' ident '['? as s
+    {
+        let varName = if s.[String.length s - 1] = '[' then begin
+            currentRule := InStringVariableOffset !currentRule;
+            tokenBuffer := [TT_LEFT_BRACKET];
+            String.sub s 1 (String.length s - 2)
+        end else
+            String.sub s 1 (String.length s - 1)
+        in
+            hereDocStartLine := false;
+            T_VARIABLE (varName)
+    }
+    | ("${"|"{$") ident as s { hereDocStartLine := false; braceStack#push (); currentRule := Token; tokenBuffer := [T_VARIABLE (String.sub s 2 (String.length s - 2))]; T_CURLY_OPEN }
+    | "{${" {hereDocStartLine := false; braceStack#push (); currentRule := Token; braceStack#push (); tokenBuffer := [T_DOLLAR_OPEN_CURLY_BRACES]; T_CURLY_OPEN }
+    | '\n' { let s2 = if !hereDocLineEnd then "\n" else "" in hereDocLineEnd := true; hereDocStartLine := true; TT_CONSTANT_STRING s2 }
 {
     let parse lexbuf = match !tokenBuffer with
         | a::b -> tokenBuffer := b; a
@@ -288,6 +340,8 @@ and inStringVariableOffset = parse
             | Outer -> outer lexbuf
             | Token -> token lexbuf
             | InString -> inString lexbuf
-            | InStringVariableOffset -> inStringVariableOffset lexbuf
+            | InStringVariableOffset pRule -> inStringVariableOffset pRule lexbuf
+            | NowDoc -> nowDoc lexbuf
+            | HereDoc -> hereDoc lexbuf
 }
 
