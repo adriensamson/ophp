@@ -12,7 +12,7 @@ class ['v] phpArray =
         val mutable currentIndex = None
         val mutable nextNumericOffset = 0
         method offsetExists off = Hashtbl.mem hashTable off
-        method offsetGet off = (Hashtbl.find hashTable off)#get
+        method offsetGet off = (self#offsetVar off)#get
         method offsetSet off (value : 'v) =
             let offset = match off with
                 | Some s ->
@@ -21,14 +21,19 @@ class ['v] phpArray =
                 | None ->
                     self#nextOffset
             in
-            if not (List.mem offset indexList) then
-                indexList <- indexList @ [offset]
-            else ();
-            let var = new variable value
-            in
-            Hashtbl.replace hashTable offset var
-        method offsetVar off = Hashtbl.find hashTable off
-        method offsetVarSet off v = self#registerOffset off; Hashtbl.replace hashTable off v
+            let var = new variable value in
+            self#offsetVarSet offset var
+        method offsetVar off =
+            try
+                Hashtbl.find hashTable off
+            with
+            | Not_found -> failwith (Printf.sprintf "Offset %s not found" off)
+        method offsetVarSet off v =
+            self#registerOffset off;
+            if not (List.mem off indexList) then
+                indexList <- indexList @ [off]
+            ;
+            Hashtbl.replace hashTable off v
         method offsetUnset off =
             let rec list_remove l e = match l with
                 | [] -> []
@@ -48,10 +53,10 @@ class ['v] phpArray =
             s
         
         method current () = match currentIndex with
-            | None -> raise Not_found
+            | None -> failwith "Invalid index"
             | Some k -> (Hashtbl.find hashTable k)#get
         method key () = match currentIndex with
-            | None -> raise Not_found
+            | None -> failwith "Invalid index"
             | Some k -> k
         method next () = match currentIndex with
             | None -> ()

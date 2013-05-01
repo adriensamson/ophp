@@ -21,6 +21,8 @@ class type ['v] variableRegistry
 = object
     method replace : string -> 'v variable -> unit
     method find : string -> 'v variable
+    method replaceSuperglobal : string -> 'v variable -> unit
+    method findSuperglobal : string -> 'v variable
     method newScope : string -> 'v variableRegistry
     method addFromParent : ?byRef:bool -> string -> unit
     method addFromGlobal : string -> unit
@@ -551,7 +553,7 @@ class compiler
                     let var = ca context in
                     var#set value
                 with
-                | Not_found ->
+                | _ ->
                     let var = object
                         val mutable v = value
                         method get = v
@@ -602,7 +604,7 @@ class compiler
                     try
                         (ca context)#get <> `Null
                     with
-                    | Not_found -> false
+                    | _ -> false
                 )
         | Empty a ->
             let ca = self#compileAssignable compileContext a in
@@ -611,7 +613,7 @@ class compiler
                     try
                         let `Bool b = to_bool (ca context)#get in not b
                     with
-                    | Not_found -> false
+                    | _ -> false
                 )
         | Include (filename, required, once) ->
             let cf = self#compileExpr compileContext filename in
@@ -696,6 +698,7 @@ class compiler
     method private compileAssignable compileContext a =
         match a with
         | Variable s -> fun context -> context#vars#find s
+        | Superglobal s -> fun context -> context#vars#findSuperglobal s
         | VariableVariable e ->
             let ce = self#compileExpr compileContext e in
             fun context -> let `String s = to_string (ce context) in context#vars#find s
@@ -730,6 +733,7 @@ class compiler
     method private compileAssignVar compileContext a =
         match a with
         | Variable s -> fun context var -> context#vars#replace s var
+        | Superglobal s -> fun context var -> context#vars#replaceSuperglobal s var
         | VariableVariable e ->
             let ce = self#compileExpr compileContext e in
             fun context var -> let `String s = to_string (ce context) in context#vars#replace s var

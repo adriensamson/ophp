@@ -1,5 +1,14 @@
+open Language.Typing
+
 let addExtension filename =
     Extension.loadFile filename
+
+let init_superglobals vars =
+    let argv = new PhpArray.phpArray in
+    Array.iter (fun arg -> argv#offsetVarSet (argv#nextOffset) (new variable (`String arg))) Sys.argv;
+    let server = new PhpArray.phpArray in
+    server#offsetVarSet "argv" (new variable (`Array argv));
+    vars#replaceSuperglobal "_SERVER" (new variable (`Array server))
 
 let run filename =
     let chan =
@@ -28,7 +37,9 @@ let run filename =
         Syntax.Parser.everything Syntax.Lexer.parse lexbuf
     in
     let filesr = new Registry.fileRegistry parse in
-    let context = Expression.makeContext (new Registry.constantRegistry) (new Variable.variableRegistry) (new Registry.functionRegistry) (new Registry.classRegistry) filesr in
+    let vars = new Variable.variableRegistry in
+    init_superglobals vars;
+    let context = Expression.makeContext (new Registry.constantRegistry) vars (new Registry.functionRegistry) (new Registry.classRegistry) filesr in
     Extension.loadExtenstionsInContext context;
     let compiler = new Compiler.compiler in
     let compileContext = (new Compiler.compileContext)#setFile filename in

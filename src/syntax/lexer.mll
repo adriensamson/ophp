@@ -224,8 +224,6 @@ and token = parse
     | "->" { T_OBJECT_OPERATOR }
     | "=>" { T_DOUBLE_ARROW }
     
-    | "$this" { T_THIS }
-    
     | '(' ' '* ("int"|"long") ' '* ')' { T_INT_CAST }
     | '(' ' '* ("double"|"float") ' '* ')' { T_DOUBLE_CAST }
     | '(' ' '* "string" ' '* ')' { T_STRING_CAST }
@@ -243,7 +241,13 @@ and token = parse
         as s { TT_CONSTANT_STRING (unescapeSimpleQuotes (String.sub s 1 (String.length s - 2))) }
     
     | ident as s { try Hashtbl.find keywords s with Not_found -> T_STRING s }
-    | '$' ident as s { T_VARIABLE (String.sub s 1 (String.length s - 1)) }
+    | '$' (ident as s)
+        {
+            match s with
+            | "this" -> T_THIS
+            |"GLOBALS"|"_SERVER"|"_GET"|"_POST"|"_FILES"|"_COOKIE"|"_SESSION"|"_REQUEST"|"_ENV" -> TT_SUPERGLOBAL s
+            | _ -> T_VARIABLE s
+        }
     | "$$" ident as s { TT_VARIABLE_VARIABLE (String.sub s 2 (String.length s - 2)) }
     | "${" { braceStack#push (); T_DOLLAR_OPEN_CURLY_BRACES }
     

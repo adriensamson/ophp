@@ -95,6 +95,8 @@ class type ['v] variable = object
 class type ['v] variableRegistry = object
     method replace : string -> 'v variable -> unit
     method find : string -> 'v variable
+    method replaceSuperglobal : string -> 'v variable -> unit
+    method findSuperglobal : string -> 'v variable
     method newScope : string -> 'v variableRegistry
     method addFromParent : ?byRef:bool -> string -> unit
     method addFromGlobal : string -> unit

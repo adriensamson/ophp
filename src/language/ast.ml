@@ -93,6 +93,7 @@ type expr =
     | Print of expr
 and  assignable =
     | Variable of string
+    | Superglobal of string
     | VariableVariable of expr
     | ArrayOffset of expr *  expr option
     | Property of expr * string

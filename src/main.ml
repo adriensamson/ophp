@@ -1,8 +1,9 @@
 let main () =
     let self = FileUtil.readlink Sys.executable_name in
     let baseDir = String.sub self 0 (String.rindex self '/') in
-    Interpreter.Main.addExtension (baseDir ^ "/extensions/core.cmo");
-    Interpreter.Main.addExtension (baseDir ^ "/extensions/spl.cmo");
+    List.iter
+        (fun e -> Interpreter.Main.addExtension (baseDir ^ "/extensions/" ^ e ^ ".cmo"))
+        ["core"; "spl"; "compat"];
     let filename =
         if Array.length Sys.argv = 2 then
             Sys.argv.(1)
