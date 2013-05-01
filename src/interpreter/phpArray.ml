@@ -54,7 +54,7 @@ class ['v] phpArray =
         
         method current () = match currentIndex with
             | None -> failwith "Invalid index"
-            | Some k -> (Hashtbl.find hashTable k)#get
+            | Some k -> Hashtbl.find hashTable k
         method key () = match currentIndex with
             | None -> failwith "Invalid index"
             | Some k -> k
@@ -89,4 +89,13 @@ class ['v] phpArray =
         {< hashTable = newHashTable >}
         
         method keys = indexList
+        
+        method sort compare =
+            indexList <- List.stable_sort compare indexList
     end
+
+let sortCompare arr k1 k2 =
+    match Expression.compare_values (arr#offsetVar k1)#get (arr#offsetVar k2)#get with
+    | None -> 0
+    | Some i -> i
+

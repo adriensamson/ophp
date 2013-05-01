@@ -17,6 +17,27 @@ let strpos_real haystack needle offset =
     with
     | Not_found -> -1
 
+let ltrim_real s chars =
+    let i = ref 0 in
+    let l = String.length s in
+    while !i < l && String.contains chars s.[!i] do
+        incr i
+    done;
+    String.sub s !i (l - !i)
+let rtrim_real s chars =
+    let l = String.length s in
+    let i = ref (l - 1) in
+    while !i > 0 && String.contains chars s.[!i] do
+        decr i
+    done;
+    String.sub s 0 !i
+
+
+
+let strlen context args =
+    let `String s = to_string (List.nth args 0)#get in
+    new variable (`Long (String.length s))
+
 let strpos context args =
     let `String haystack = to_string (List.nth args 0)#get in
     let needle = match (List.nth args 1)#get with
@@ -28,11 +49,18 @@ let strpos context args =
     | -1 -> new variable (`Bool false)
     | n -> new variable (`Long n)
 
+let trim context args =
+    let `String s = to_string (List.nth args 0)#get in
+    let `String chars = try to_string (List.nth args 0)#get with Not_found -> `String " \t\n\r\x00\x0B" in (* TODO expand .. *)
+    new variable (`String (ltrim_real (rtrim_real s chars) chars))
+
 let _ = Interpreter.Extension.register
     "core/string"
     []
     [
-        ("strpos", strpos)
+        ("strlen", strlen);
+        ("strpos", strpos);
+        ("trim", trim)
     ]
     []
     []

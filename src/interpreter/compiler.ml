@@ -273,7 +273,7 @@ class compiler
                     a#rewind ();
                     let result = ref NoOp in
                     while not (is_break !result) && a#valid() do
-                        ((context#vars)#find vn)#set (a#current ());
+                        ((context#vars)#find vn)#set (a#current ())#get;
                         begin match ko with
                             | None -> ()
                             | Some kn -> let k = a#key () in ((context#vars)#find kn)#set (`String k)

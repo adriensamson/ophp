@@ -39,7 +39,7 @@ let compare_values val1 val2 = match val1, val2 with
             while !result = Some 0 && a1#valid () do
                 let key = a1#key () in
                 if a2#offsetExists key then
-                    result := Some (compare (a1#current ()) (a2#offsetGet key))
+                    result := Some (compare (a1#current ())#get (a2#offsetGet key))
                 else
                     result := None;
                 a1#next ();
@@ -64,14 +64,14 @@ let rec compare_all op val1 val2 = match op with
         | (`Array a1, `Array a2) ->
             a1#rewind ();
             a2#rewind ();
-            let result = ref (a1#key () = a2#key () && compare_all Identical (a1#current ()) (a2#current ())) in
+            let result = ref (a1#key () = a2#key () && compare_all Identical (a1#current ())#get (a2#current ())#get) in
             while !result do
                 a1#next ();
                 a2#next ();
                 result := (not (a1#valid ()) && not (a2#valid ()))
                     || (a1#valid() && a2#valid()
                         && a1#key () = a2#key ()
-                        && compare_all Identical (a1#current ()) (a2#current ())
+                        && compare_all Identical (a1#current ())#get (a2#current ())#get
                         )
             done;
             !result
