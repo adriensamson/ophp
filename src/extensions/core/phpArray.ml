@@ -17,6 +17,20 @@ let array_map c l = (* TODO mulitple arrays *)
         a#keys;
     new variable (`Array newArr)
 
+let array_merge c l =
+    let a = match (List.nth l 0)#get with `Array a -> a | _ -> failwith "Not an array" in
+    let newArr = a#copy () in
+    List.iter
+        (fun v ->
+            let a = match v#get with `Array a -> a | _ -> failwith "Not an array" in
+            List.iter
+                (fun k -> if is_numeric false (`String k) then newArr#offsetVarSet newArr#nextOffset (a#offsetVar k) else newArr#offsetVarSet k (a#offsetVar k))
+                a#keys
+        )
+        (List.tl l)
+        ;
+    new variable (`Array newArr)
+
 let array_push c l =
     let a = match (List.nth l 0)#get with `Array a -> a | _ -> failwith "Not an array" in
     let v = (List.nth l 1)#get in
@@ -36,6 +50,33 @@ let array_shift c l =
         newArr#rewind ();
         (List.nth l 0)#set (`Array newArr);
         r
+
+let array_slice c l =
+    let a = match (List.nth l 0)#get with `Array a -> a | _ -> failwith "Not an array" in
+    let `Long offset = to_long (List.nth l 1)#get in
+    let length = try (List.nth l 2)#get with Failure _ -> `Null in
+    let `Bool preserveKeys = try to_bool (List.nth l 3)#get with Failure _ -> `Bool false in
+    
+    let arrayLength = a#count () in
+    let realOffset = if offset >= 0 then offset else
+        max (arrayLength + offset) 0
+    in
+    let calcLength = match length with 
+        | `Null -> arrayLength - realOffset
+        | v -> let `Long l = to_long v in if l >= 0 then l else arrayLength + l - realOffset
+    in
+    let realLength = max 0 calcLength in
+    let rec slice l offset length = match l, offset, length with
+        | h::t, i, _ when i > 0 -> slice t (i - 1) length
+        | h::t, _, i when i > 0 -> h::(slice t 0 (i - 1))
+        | _, _, _ -> []
+    in
+    let newArr = new Interpreter.PhpArray.phpArray in
+    List.iter
+        (fun k -> if is_numeric false (`String k) && not preserveKeys then newArr#offsetVarSet newArr#nextOffset (a#offsetVar k) else newArr#offsetVarSet k (a#offsetVar k))
+        (slice a#keys realOffset realLength)
+    ;
+    new variable (`Array newArr)
 
 let each c l =
     let a = match (List.nth l 0)#get with `Array a -> a | _ -> failwith "Not an array" in
@@ -72,8 +113,10 @@ let _ = Interpreter.Extension.register
     [
         ("array_keys", array_keys);
         ("array_map", array_map);
+        ("array_merge", array_merge);
         ("array_push", array_push);
         ("array_shift", array_shift);
+        ("array_slice", array_slice);
         ("each", each);
         ("implode", implode);
         ("join", implode);
