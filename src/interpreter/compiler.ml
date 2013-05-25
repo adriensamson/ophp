@@ -463,11 +463,19 @@ class compiler
         | And (f, g) ->
             let cf = self#compileExpr compileContext f in
             let cg = self#compileExpr compileContext g in
-            fun context -> Expression.boolean_operator (&&) (cf context) (cg context)
+            fun context ->
+                let `Bool c = to_bool (cf context) in
+                if c then
+                    to_bool (cg context)
+                else `Bool false
         | Or (f, g) ->
             let cf = self#compileExpr compileContext f in
             let cg = self#compileExpr compileContext g in
-            fun context -> Expression.boolean_operator (||) (cf context) (cg context)
+            fun context ->
+                let `Bool c = to_bool (cf context) in
+                if not c then
+                    to_bool (cg context)
+                else `Bool true
         | Xor (f, g) ->
             let cf = self#compileExpr compileContext f in
             let cg = self#compileExpr compileContext g in
