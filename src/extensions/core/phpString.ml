@@ -49,7 +49,44 @@ let rtrim_real s chars =
     done;
     String.sub s 0 !i
 
+let rec map2 f l1 l2 = match l1, l2 with
+    | h1::t1, h2::t2 -> (f h1 (Some h2))::(map2 f t1 t2)
+    | h1::t1, [] -> (f h1 None)::(map2 f t1 [])
+    | [], _ -> []
 
+
+let str_replace c args =
+    let search = (List.nth args 0)#get
+    and replace = (List.nth args 1)#get
+    and subject = (List.nth args 2)#get
+    (* and countVar = try List.nth args 3 with | Failure _ -> new variable (`Long 0) TODO *)
+    in
+    let pairs = match search, replace with
+        | `Array a, `Array b -> map2
+                (fun k1 k2 ->
+                    let `String a = to_string (a#offsetVar k1)#get in
+                    let b = match k2 with
+                        | Some k2 -> let `String b = to_string (b#offsetVar k2)#get in b
+                        | None -> ""
+                    in a, b
+                )
+                a#keys
+                b#keys
+        | `Array a, b -> List.map (fun k -> let `String s1, `String s2 = to_string (a#offsetVar k)#get, to_string b in s1, s2) a#keys
+        | _, `Array _ -> failwith "str_replace search must be an array when replace is an array"
+        | _, _ -> let `String a, `String b = to_string search, to_string replace in [(a,b)]
+    in
+    let do_replace s =
+        List.fold_left (fun s (from, dest) -> Str.global_replace (Str.regexp_string (Str.quote from)) dest s) s pairs
+    in
+    match subject with
+    | `Array a ->
+        let newArr = new Interpreter.PhpArray.phpArray in
+        List.iter (fun k -> let `String s = to_string (a#offsetVar k)#get in newArr#offsetVarSet k (new variable (`String (do_replace s)))) a#keys;
+        new variable (`Array newArr)
+    | _ ->
+        let `String s = to_string subject in
+        new variable (`String (do_replace s))
 
 let strlen context args =
     let `String s = to_string (List.nth args 0)#get in
@@ -97,6 +134,7 @@ let _ = Interpreter.Extension.register
     "core/string"
     []
     [
+        ("str_replace", str_replace);
         ("strlen", strlen);
         ("strpos", strpos);
         ("strrpos", strrpos);
