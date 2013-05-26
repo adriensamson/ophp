@@ -416,7 +416,7 @@ class compiler
             | RelativeName ([], "__TRAIT__") -> fun _ -> `String compileContext#getTrait
             | RelativeName ([], "__METHOD__") -> fun _ -> `String compileContext#getMethod
             | RelativeName ([], "__NAMESPACE__") -> fun _ -> `String compileContext#getNamespace
-            | _ -> fun (context: (_,_,_) evalContext) -> context#constants#get (context#resolveNamespace name)
+            | _ -> fun (context: (_,_,_) evalContext) -> context#constants#get (context#resolveNamespace ~fallbackTest:(context#constants#has) name)
             end
         | Cast (ctype, e) ->
             let ce = self#compileExpr compileContext e in
