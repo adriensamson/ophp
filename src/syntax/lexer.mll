@@ -272,6 +272,7 @@ and inString = parse
         in
             T_VARIABLE (varName)
     }
+    | '$' { TT_CONSTANT_STRING "$" }
     | ("${"|"{$") ident as s { braceStack#push (); currentRule := Token; tokenBuffer := [T_VARIABLE (String.sub s 2 (String.length s - 2))]; T_CURLY_OPEN }
     | "{${" {braceStack#push (); currentRule := Token; braceStack#push (); tokenBuffer := [T_DOLLAR_OPEN_CURLY_BRACES]; T_CURLY_OPEN }
 

@@ -134,6 +134,7 @@ control_stmt:
     | T_SWITCH TT_LEFT_PAR expr TT_RIGHT_PAR TT_LEFT_BRACE switch_cases TT_RIGHT_BRACE { Ast.Switch ($3, $6) }
     | T_BREAK TT_SEMI_COLON { Ast.Break 1 }
     | T_BREAK T_LNUMBER TT_SEMI_COLON { Ast.Break $2 }
+    | T_BREAK TT_LEFT_PAR T_LNUMBER TT_RIGHT_PAR TT_SEMI_COLON { Ast.Break $3 }
     | T_CONTINUE TT_SEMI_COLON { Ast.Continue 1 }
     | T_CONTINUE T_LNUMBER TT_SEMI_COLON { Ast.Continue $2 }
     | T_THROW expr TT_SEMI_COLON { Ast.Throw $2 }
