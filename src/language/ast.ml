@@ -88,7 +88,8 @@ type expr =
     | Isset of assignable
     | Empty of assignable
     | ArrayConstructor of (expr option *  expr) list
-    | NewObject of name *  expr list
+    | NewObject of classReference *  expr list
+    | VariableNewObject of expr *  expr list
     | Include of expr * bool * bool (* filename, required, once *)
     | Print of expr
 and  assignable =
@@ -119,8 +120,8 @@ and  stmt =
 and  classDefElement =
     | ConstantDef of string *  expr
     | PropertyDef of string * bool * Typing.visibility *  expr option
-    | MethodDef of string * bool * bool * Typing.visibility * argConf list *  stmt list
-    | AbstractMethodDef of string * bool * Typing.visibility * string list
+    | MethodDef of string * bool (* isStatic *) * bool (* isFinal *) * bool (* returnByRef *)  * Typing.visibility * argConf list *  stmt list
+    | AbstractMethodDef of string * bool (* isStatic *) * bool (* returnByRef *) * Typing.visibility * argConf list
 and argConf = string * bool * typeHint * expr option
 and listAssignElement =
     | LAE_None

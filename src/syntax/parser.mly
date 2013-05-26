@@ -185,10 +185,33 @@ class_modifiers:
     | T_FINAL T_STATIC { (true, true, false) }
     | T_STATIC T_FINAL { (true, false, true) }
 
-class_content_modifiers:
+class_property_modifiers:
     | visibility { ($1, false) }
     | visibility T_STATIC { ($1, true) }
     | T_STATIC visibility { ($2, true) }
+
+class_method_modifiers:
+    | visibility { ($1, false, false) }
+    | visibility T_STATIC { ($1, true, false) }
+    | T_STATIC visibility { ($2, true, false) }
+    | visibility T_FINAL { ($1, false, true) }
+    | T_FINAL visibility { ($2, false, true) }
+    | visibility T_STATIC T_FINAL { ($1, true, true) }
+    | T_STATIC visibility T_FINAL { ($2, true, true) }
+    | visibility T_FINAL T_STATIC { ($1, true, true) }
+    | T_STATIC T_FINAL visibility { ($3, true, true) }
+    | T_FINAL visibility T_STATIC { ($2, true, true) }
+    | T_FINAL T_STATIC visibility { ($3, true, true) }
+
+class_abstract_method_modifiers:
+    | visibility T_ABSTRACT { ($1, false) }
+    | T_ABSTRACT visibility { ($2, false) }
+    | visibility T_STATIC T_ABSTRACT { ($1, true) }
+    | T_STATIC visibility T_ABSTRACT { ($2, true) }
+    | visibility T_ABSTRACT T_STATIC { ($1, true) }
+    | T_STATIC T_ABSTRACT visibility { ($3, true) }
+    | T_ABSTRACT visibility T_STATIC { ($2, true) }
+    | T_ABSTRACT T_STATIC visibility { ($3, true) }
 
 class_def_content_list:
       { [] }
@@ -196,12 +219,16 @@ class_def_content_list:
 
 class_def_content:
     | T_CONST T_STRING TT_EQUAL expr TT_SEMI_COLON { Ast.ConstantDef ($2, $4) }
-    | class_content_modifiers T_VARIABLE TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, None) }
-    | class_content_modifiers T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, Some $4) }
-    | class_content_modifiers T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
-        { let vis, isStatic = $1 in Ast.MethodDef ($3, isStatic, false, vis, $5, $8) }
-    | class_content_modifiers T_FUNCTION TT_BITWISE_AND T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
-        { let vis, isStatic = $1 in Ast.MethodDef ($4, isStatic, true, vis, $6, $9) }
+    | class_property_modifiers T_VARIABLE TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, None) }
+    | class_property_modifiers T_VARIABLE TT_EQUAL expr TT_SEMI_COLON { let vis, isStatic = $1 in Ast.PropertyDef ($2, isStatic, vis, Some $4) }
+    | class_method_modifiers T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { let vis, isStatic, isFinal = $1 in Ast.MethodDef ($3, isStatic, isFinal, false, vis, $5, $8) }
+    | class_method_modifiers T_FUNCTION TT_BITWISE_AND T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_LEFT_BRACE stmt_list TT_RIGHT_BRACE
+        { let vis, isStatic, isFinal = $1 in Ast.MethodDef ($4, isStatic, isFinal, true, vis, $6, $9) }
+    | class_abstract_method_modifiers T_FUNCTION T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_SEMI_COLON
+        { let vis, isStatic = $1 in Ast.AbstractMethodDef ($3, isStatic, false, vis, $5) }
+    | class_abstract_method_modifiers T_FUNCTION TT_BITWISE_AND T_STRING TT_LEFT_PAR argument_definition_list TT_RIGHT_PAR TT_SEMI_COLON
+        { let vis, isStatic = $1 in Ast.AbstractMethodDef ($4, isStatic, true, vis, $6) }
 
 is_reference:
     | { false }
@@ -355,8 +382,10 @@ expr:
     
     | namespaced_identifier TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.FunctionCall ($1, $3) }
     | T_ARRAY TT_LEFT_PAR array_content_list TT_RIGHT_PAR { Ast.ArrayConstructor $3 }
-    | T_NEW namespaced_identifier { Ast.NewObject ($2, []) }
-    | T_NEW namespaced_identifier TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
+    | T_NEW class_reference { Ast.NewObject ($2, []) }
+    | T_NEW class_reference TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.NewObject ($2, $4) }
+    | T_NEW assignable { Ast.VariableNewObject (Ast.Assignable $2, []) }
+    | T_NEW assignable TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.VariableNewObject (Ast.Assignable $2, $4) }
     | class_reference T_DOUBLE_COLON T_STRING TT_LEFT_PAR argument_call_list TT_RIGHT_PAR { Ast.StaticMethodCall ($1, $3, $5) }
     | class_reference T_DOUBLE_COLON T_STRING { Ast.ClassConstant ($1, $3) }
     

@@ -49,7 +49,7 @@ class ['v] phpClass
     (propertiesL : (string * bool * Language.Typing.visibility * 'v) list)
     (methodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpObject -> 'v variable list -> 'v variable)) list)
     (staticMethodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpClass -> 'v variable list -> 'v variable)) list)
-    (abstractMethods : (string * bool * Language.Typing.visibility * string list) list)
+    (abstractMethods : (string * bool * bool * Language.Typing.visibility * (string * bool * Language.Ast.typeHint) list) list)
     = object (self)
     
         val staticProperties = Hashtbl.create 10
@@ -84,12 +84,12 @@ class ['v] phpClass
         method getMethod methodName =
             Hashtbl.find methods methodName
         
-        method newObject l =
+        method newObject l cc =
             let o = new phpObject (self :> 'v phpClass) in
             self#initObject o;
             begin try
                 let (vis, f) = self#getMethod "__construct" in
-                if vis = Public then
+                if vis = Public || vis = Protected && (match cc with Some c -> c#instanceOf (self :> 'v phpClass) | None -> false) || cc = Some (self :> 'v phpClass) then
                     let _ = f o l in ()
                 else raise BadVisibility
             with

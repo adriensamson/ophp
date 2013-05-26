@@ -79,7 +79,7 @@ type ('a, 'o, 'c) compileClassContent =
     | ClassProperty of (('a, 'o, 'c) evalContext -> string * bool * visibility * ('a, 'o) value)
     | ClassMethod of (('a, 'o, 'c) evalContext -> string * visibility * ('c -> 'o -> ('a, 'o) value variable list -> ('a, 'o) value variable))
     | ClassStaticMethod of (('a, 'o, 'c) evalContext -> string * visibility * ('c -> 'c -> ('a, 'o) value variable list -> ('a, 'o) value variable))
-    | ClassAbstractMethod of (string * bool * visibility * string list)
+    | ClassAbstractMethod of (string * bool * bool * visibility * (string * bool * typeHint) list)
 
 let checkTypeHint (localContext : (_,_,_) evalContext) typeHint value = match typeHint, value with
     | NoTypeHint, _
@@ -356,7 +356,7 @@ class compiler
                 | None -> fun context -> `Null
                 | Some i -> self#compileExpr compileContext i
             in ClassProperty (fun context -> (name, isStatic, visibility, inited context))
-        | MethodDef (name, isStatic, returnByRef, visibility, argConf, code) ->
+        | MethodDef (name, isStatic, isFinal, returnByRef, visibility, argConf, code) ->
             begin match isStatic with
             | true ->
                 let compiledCode = self#compileStmtList (compileContext#setMethod name) code in
@@ -379,8 +379,8 @@ class compiler
                     (name, visibility, f)
                 )
             end
-        | AbstractMethodDef (name, isStatic, visibility, argNames) ->
-            ClassAbstractMethod (name, isStatic, visibility, argNames)
+        | AbstractMethodDef (name, isStatic, returnByRef, visibility, argConf) ->
+            ClassAbstractMethod (name, isStatic, returnByRef, visibility, List.map (fun (n, r, v, e) -> (n, r, v)) argConf)
     method compileFile compileContext l =
         let compiledNl = self#compileNamespaceList compileContext l in
         fun context ->
@@ -545,9 +545,22 @@ class compiler
                 in
                 List.iter addElement compiledL;
                 `Array phpArray
-        | NewObject (className, argValues) ->
+        | NewObject (classRef, argValues) ->
             let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
-            fun context -> `Object ((context#classes#get (context#resolveNamespace className))#newObject (List.map (fun cf -> cf context) compiledArgs))
+            fun context ->
+                let phpClass = match classRef with
+                    | ClassName className -> context#classes#get (context#resolveNamespace className)
+                    | Self -> getSome context#callingClass
+                    | Parent -> getSome (getSome context#callingClass)#parent
+                    | Static -> getSome context#staticClass
+                in
+                `Object (phpClass#newObject (List.map (fun cf -> cf context) compiledArgs) context#callingClass)
+        | VariableNewObject (e, argValues) ->
+            let compiledArgs = List.map (self#compileExprVar compileContext) argValues in
+            let ce = self#compileExpr compileContext e in
+            fun context ->
+                let `String cname = to_string (ce context) in
+                `Object ((context#classes#get cname)#newObject (List.map (fun cf -> cf context) compiledArgs) context#callingClass)
         | Assign (a, f) ->
             let ca = self#compileAssignable compileContext a in
             let cav = self#compileAssignVar compileContext a in
