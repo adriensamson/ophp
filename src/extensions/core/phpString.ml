@@ -1,8 +1,8 @@
 open Language.Typing
 
-let strpos_real haystack needle offset =
+let strpos_real haystack needle =
     let result = ref (-1) in
-    let current_offset = ref offset in
+    let current_offset = ref 0 in
     let hl = String.length haystack in
     let nl = String.length needle in
     try
@@ -12,6 +12,23 @@ let strpos_real haystack needle offset =
                 result := index
             else
                 current_offset := index + 1
+        done;
+        !result
+    with
+    | Not_found -> -1
+
+let strrpos_real haystack needle =
+    let result = ref (-1) in
+    let hl = String.length haystack in
+    let current_offset = ref hl in
+    let nl = String.length needle in
+    try
+        while !current_offset > 0 && !result = -1 do
+            let index = String.rindex_from haystack !current_offset needle.[0] in
+            if String.sub haystack index nl = needle then
+                result := index
+            else
+                current_offset := index - 1
         done;
         !result
     with
@@ -45,9 +62,31 @@ let strpos context args =
         | v -> let `Long i = to_long v in String.make 1 (char_of_int i)
     in
     let offset = if List.length args > 2 then let `Long i = to_long (List.nth args 2)#get in i else 0 in
-    match strpos_real haystack needle offset with
+    let subs = match offset with
+        | 0 -> haystack
+        | i when i > 0 -> String.sub haystack i (String.length haystack - i)
+        | i -> String.sub haystack (String.length haystack + i) (-i)
+    in
+    match strpos_real subs needle with
     | -1 -> new variable (`Bool false)
     | n -> new variable (`Long n)
+
+let strrpos context args =
+    let `String haystack = to_string (List.nth args 0)#get in
+    let needle = match (List.nth args 1)#get with
+        | `String s -> s
+        | v -> let `Long i = to_long v in String.make 1 (char_of_int i)
+    in
+    let offset = if List.length args > 2 then let `Long i = to_long (List.nth args 2)#get in i else 0 in
+    let subs = match offset with
+        | 0 -> haystack
+        | i when i > 0 -> String.sub haystack i (String.length haystack - i)
+        | i -> String.sub haystack (String.length haystack + i) (-i)
+    in
+    match strpos_real subs needle with
+    | -1 -> new variable (`Bool false)
+    | n -> new variable (`Long n)
+
 
 let trim context args =
     let `String s = to_string (List.nth args 0)#get in
@@ -60,6 +99,7 @@ let _ = Interpreter.Extension.register
     [
         ("strlen", strlen);
         ("strpos", strpos);
+        ("strrpos", strrpos);
         ("trim", trim)
     ]
     []

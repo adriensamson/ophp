@@ -11,6 +11,15 @@ let file_exists context args =
             Unix.access path [Unix.F_OK]; true
         with Unix.Unix_error _ -> false))
 
+let file_get_contents c args =
+    let `String path = to_string (List.nth args 0)#get in
+    let size = (Unix.stat path).Unix.st_size in
+    let s = String.create size in
+    let f = open_in path in
+    assert (size = input f s 0 size);
+    close_in f;
+    new variable (`String s)
+
 let is_file context args =
     let `String path = to_string (List.nth args 0)#get in
     new variable (`Bool
@@ -38,6 +47,7 @@ let _ = Interpreter.Extension.register
     [
         ("dirname", dirname);
         ("file_exists", file_exists);
+        ("file_get_contents", file_get_contents);
         ("is_file", is_file);
         ("is_dir", is_dir);
         ("realpath", realpath)

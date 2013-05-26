@@ -499,7 +499,7 @@ class compiler
             fun context -> begin
                 match ce context with
                 | `Object o -> `Bool (o#instanceOf (context#classes#get (context#resolveNamespace className)))
-                | _ -> raise BadType
+                | _ -> `Bool false
                 end
         | Closure (returnByRef, argConf, uses, code) ->
             let compiledCode = self#compileStmtList compileContext code in
