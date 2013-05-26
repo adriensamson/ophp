@@ -54,6 +54,16 @@ let rec map2 f l1 l2 = match l1, l2 with
     | h1::t1, [] -> (f h1 None)::(map2 f t1 [])
     | [], _ -> []
 
+let ltrim c args =
+    let `String s = to_string (List.nth args 0)#get in
+    let `String chars = try to_string (List.nth args 0)#get with Not_found -> `String " \t\n\r\x00\x0B" in (* TODO expand .. *)
+    new variable (`String (ltrim_real s chars))
+
+let rtrim c args =
+    let `String s = to_string (List.nth args 0)#get in
+    let `String chars = try to_string (List.nth args 0)#get with Not_found -> `String " \t\n\r\x00\x0B" in (* TODO expand .. *)
+    new variable (`String (rtrim_real s chars))
+
 
 let str_replace c args =
     let search = (List.nth args 0)#get
@@ -124,6 +134,13 @@ let strrpos context args =
     | -1 -> new variable (`Bool false)
     | n -> new variable (`Long n)
 
+let strtolower c args =
+    let `String s = to_string (List.nth args 0)#get in
+    new variable (`String (String.lowercase s))
+
+let strtoupper c args =
+    let `String s = to_string (List.nth args 0)#get in
+    new variable (`String (String.uppercase s))
 
 let trim context args =
     let `String s = to_string (List.nth args 0)#get in
@@ -134,10 +151,14 @@ let _ = Interpreter.Extension.register
     "core/string"
     []
     [
+        ("ltrim", ltrim);
+        ("rtrim", rtrim);
         ("str_replace", str_replace);
         ("strlen", strlen);
         ("strpos", strpos);
         ("strrpos", strrpos);
+        ("strtolower", strtolower);
+        ("strtoupper", strtoupper);
         ("trim", trim)
     ]
     []
