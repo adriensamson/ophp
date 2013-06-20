@@ -153,7 +153,7 @@ let invoke_callable v context args = match v with
     | `Object o -> (o#getObjectMethod None "__invoke") args
     | `String s -> context#functions#exec s args
     | `Array a -> begin
-        (*try*) match (a#offsetVar "0")#get, (a#offsetVar "1")#get with
+        (*try*) match (a#get "0")#get, (a#get "1")#get with
             | `String cn, `String fn -> let cl = context#classes#get cn in (cl#getClassStaticMethod None fn cl) args
             | `Object o, `String fn -> (o#getObjectMethod None fn) args
             | _, _ -> failwith "not a callable array"
@@ -430,7 +430,7 @@ class compiler
                     fun context -> match (ce context) with
                         | `Array a -> `Array a
                         | `Object o -> failwith "object array cast not implemented"
-                        | v -> let a = new PhpArray.phpArray in a#offsetVarSet "0" (new variable v); `Array a
+                        | v -> let a = new PhpArray.phpArray in a#set "0" (new variable v); `Array a
                     end
                 | CastToObject -> failwith "object cast not implemented"
             end
@@ -540,8 +540,8 @@ class compiler
             fun context ->
                 let phpArray = new PhpArray.phpArray in
                 let addElement (e1, e2) = match e1 with
-                    | None -> phpArray#offsetSet None (e2 context)
-                    | Some o -> let `String offset = to_string (o context) in phpArray#offsetSet (Some offset) (e2 context)
+                    | None -> phpArray#setOption None (new variable (e2 context))
+                    | Some o -> let `String offset = to_string (o context) in phpArray#setOption (Some offset) (new variable (e2 context))
                 in
                 List.iter addElement compiledL;
                 `Array phpArray
@@ -597,7 +597,7 @@ class compiler
                 match offsets with
                 | [] -> e
                 | i::t -> match e with
-                    | `Array a -> getOffset (a#offsetGet (string_of_int i)) t
+                    | `Array a -> getOffset (a#get (string_of_int i))#get t
                     | _ -> failwith "list() assignee must be an array"
             in
             let doAssign context e (offsets, ca) =
@@ -731,7 +731,7 @@ class compiler
                 | None -> raise Expression.MissingArrayOffset
                 | Some co -> match ce context with
                     | `String s -> let `Long i = to_long (co context) in new variable (`String (String.sub s i 1))
-                    | `Array a -> let `String offset = to_string (co context) in a#offsetVar offset
+                    | `Array a -> let `String offset = to_string (co context) in a#get offset
                     | _ -> raise BadType
                 end
         | StaticProperty (classRef, propName) ->
@@ -764,8 +764,8 @@ class compiler
             fun context var ->
                 let arr = match ce context with `Array arr -> arr | _ -> raise BadType in
                 begin match co with
-                | None -> arr#offsetVarSet (arr#nextOffset) var
-                | Some co -> let `String offset = to_string (co context) in arr#offsetVarSet offset var
+                | None -> arr#set (arr#nextOffset) var
+                | Some co -> let `String offset = to_string (co context) in arr#set offset var
                 end
         | StaticProperty (classRef, propName) ->
             fun context var ->

@@ -74,15 +74,15 @@ let str_replace c args =
     let pairs = match search, replace with
         | `Array a, `Array b -> map2
                 (fun k1 k2 ->
-                    let `String a = to_string (a#offsetVar k1)#get in
+                    let `String a = to_string (a#get k1)#get in
                     let b = match k2 with
-                        | Some k2 -> let `String b = to_string (b#offsetVar k2)#get in b
+                        | Some k2 -> let `String b = to_string (b#get k2)#get in b
                         | None -> ""
                     in a, b
                 )
                 a#keys
                 b#keys
-        | `Array a, b -> List.map (fun k -> let `String s1, `String s2 = to_string (a#offsetVar k)#get, to_string b in s1, s2) a#keys
+        | `Array a, b -> List.map (fun k -> let `String s1, `String s2 = to_string (a#get k)#get, to_string b in s1, s2) a#keys
         | _, `Array _ -> failwith "str_replace search must be an array when replace is an array"
         | _, _ -> let `String a, `String b = to_string search, to_string replace in [(a,b)]
     in
@@ -92,7 +92,7 @@ let str_replace c args =
     match subject with
     | `Array a ->
         let newArr = new Interpreter.PhpArray.phpArray in
-        List.iter (fun k -> let `String s = to_string (a#offsetVar k)#get in newArr#offsetVarSet k (new variable (`String (do_replace s)))) a#keys;
+        List.iter (fun k -> let `String s = to_string (a#get k)#get in newArr#set k (new variable (`String (do_replace s)))) a#keys;
         new variable (`Array newArr)
     | _ ->
         let `String s = to_string subject in

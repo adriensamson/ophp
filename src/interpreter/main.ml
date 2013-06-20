@@ -5,9 +5,9 @@ let addExtension filename =
 
 let init_superglobals vars =
     let argv = new PhpArray.phpArray in
-    Array.iter (fun arg -> argv#offsetVarSet (argv#nextOffset) (new variable (`String arg))) Sys.argv;
+    Array.iter (fun arg -> argv#set (argv#nextOffset) (new variable (`String arg))) Sys.argv;
     let server = new PhpArray.phpArray in
-    server#offsetVarSet "argv" (new variable (`Array argv));
+    server#set "argv" (new variable (`Array argv));
     vars#replaceSuperglobal "_SERVER" (new variable (`Array server))
 
 let run filename =

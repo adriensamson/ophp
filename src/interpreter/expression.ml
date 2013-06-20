@@ -38,8 +38,8 @@ let compare_values val1 val2 = match val1, val2 with
             let result = ref (Some 0) in
             while !result = Some 0 && a1#valid () do
                 let key = a1#key () in
-                if a2#offsetExists key then
-                    result := Some (compare (a1#current ())#get (a2#offsetGet key))
+                if a2#has key then
+                    result := Some (compare (a1#current ())#get (a2#get key)#get)
                 else
                     result := None;
                 a1#next ();
