@@ -1,14 +1,11 @@
 class ['v] constantRegistry =
     object
-        val constants = Hashtbl.create 10
-        method add (name : string) (value: 'v) =
-            Hashtbl.add constants name value
+        inherit [string, 'v] Bag.bag 10 as parent
         method get name =
             try
-                Hashtbl.find constants name
+                parent#get name
             with
             | Not_found -> failwith (Printf.sprintf "Constant %s not found" name)
-        method has name = Hashtbl.mem constants name
     end
 
 class ['var] functionRegistry =
@@ -27,17 +24,15 @@ class ['var] functionRegistry =
 
 class ['c] classRegistry =
     object
-        val classes = Hashtbl.create 10
+        inherit [string, 'c] Bag.bag 10 as parent
         val mutable autoload = fun _ -> ()
         method setAutoload a = autoload <- a
-        method add (name : string) (c : 'c) = Hashtbl.add classes name c
-        method has name = Hashtbl.mem classes name
         method get name =
             try
-                begin if not (Hashtbl.mem classes name) then
+                begin if not (parent#has name) then
                     autoload name
                 end;
-                Hashtbl.find classes name
+                parent#get name
             with
             | Not_found -> failwith (Printf.sprintf "Class %s not found" name)
     end

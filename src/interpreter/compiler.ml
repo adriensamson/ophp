@@ -124,7 +124,7 @@ let classDef className isStatic isAbstract isFinal isInterface parentName implem
     fun context ->
         let parent = match parentName with None -> None | Some n -> Some (context#classes#get n) in
         let implements = List.map (context#classes#get) implementsNames in
-        context#classes#add
+        context#classes#set
             className
             (new Object.phpClass
                 className isStatic isAbstract isFinal isInterface parent implements
