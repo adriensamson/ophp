@@ -1,6 +1,6 @@
 open Interpreter
 
-let exceptionConstruct self obj args =
+let exceptionConstruct self = object method exec obj args =
     let num = List.length args in
     if num > 0 then
         obj#setObjectProperty (Some self) "message" (List.nth args 0)#get;
@@ -9,7 +9,7 @@ let exceptionConstruct self obj args =
     if num > 2 then
         obj#setObjectProperty (Some self) "previous" (List.nth args 2)#get;
     object method get = `Null method set = fun _ -> () end
-    
+end
 
 let (exceptionClass : (('v PhpArray.phpArray, 'v Object.phpObject)  Language.Typing.value as 'v) Object.phpClass)
     = new Object.phpClass "Exception" false false false false None []
@@ -21,7 +21,7 @@ let (exceptionClass : (('v PhpArray.phpArray, 'v Object.phpObject)  Language.Typ
     ]
     [
         ("__construct", Language.Typing.Public, exceptionConstruct);
-        ("getMessage", Language.Typing.Public, fun self obj args -> obj#getObjectPropertyVar (Some self) "message")
+        ("getMessage", Language.Typing.Public, fun self -> object method exec obj args = obj#getObjectPropertyVar (Some self) "message" end)
     ]
     []
     []

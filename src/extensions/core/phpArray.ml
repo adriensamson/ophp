@@ -8,7 +8,7 @@ let array_keys c l =
         a#keys;
     new variable (`Array akeys)
 
-let array_map c l = (* TODO mulitple arrays *)
+let array_map c l =
     let a = match (List.nth l 1)#get with `Array a -> a | _ -> failwith "Not an array" in
     let callable = (List.nth l 0)#get in
     let newArr = new Interpreter.PhpArray.phpArray in

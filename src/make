@@ -22,7 +22,7 @@ rule() {
     byte)   ocb $TARGET.byte;;
     all)    ocb $TARGET.native $TARGET.byte $EXTENSIONS;;
     depend) echo "Not needed.";;
-    *)      echo "Unknown action $1";;
+    *)      ocb $1;;
   esac;
 }
 

@@ -29,14 +29,6 @@ let findWithParents f phpClass callingClass name =
                 | Not_found -> f' (tryParent c#parent)
         in f' phpClass
 
-
-class ['v] variable (value : 'v) =
-    object
-    val mutable v = value
-    method get = v
-    method set nv = v <- nv
-    end
-
 class ['v] phpClass
     (name : string)
     (isStatic : bool)
@@ -47,8 +39,8 @@ class ['v] phpClass
     (implements : 'v phpClass list)
     (constantsL : (string * 'v) list)
     (propertiesL : (string * bool * Language.Typing.visibility * 'v) list)
-    (methodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpObject -> 'v variable list -> 'v variable)) list)
-    (staticMethodsL : (string * Language.Typing.visibility * ('v phpClass -> 'v phpClass -> 'v variable list -> 'v variable)) list)
+    (methodsL : (string * Language.Typing.visibility * ('v phpClass -> < exec : 'v phpObject -> 'v variable list -> 'v variable >)) list)
+    (staticMethodsL : (string * Language.Typing.visibility * ('v phpClass -> < exec : 'v phpClass -> 'v variable list -> 'v variable >)) list)
     (abstractMethods : (string * bool * bool * Language.Typing.visibility * (string * bool * Language.Ast.typeHint) list) list)
     = object (self)
     
@@ -90,7 +82,7 @@ class ['v] phpClass
             begin try
                 let (vis, f) = self#getMethod "__construct" in
                 if vis = Public || vis = Protected && (match cc with Some c -> c#instanceOf (self :> 'v phpClass) | None -> false) || cc = Some (self :> 'v phpClass) then
-                    let _ = f o l in ()
+                    let _ = f#exec o l in ()
                 else raise BadVisibility
             with
             | Not_found -> ()
@@ -125,9 +117,9 @@ class ['v] phpClass
         method setClassStaticPropertyVar cc n =
             (findWithParents (fun c -> c#replaceStaticProperty) (self :> 'v phpClass) cc n)
         method getClassStaticMethod =
-            findWithParents (fun c -> c#getStaticMethod) (self :> 'v phpClass)
+            (findWithParents (fun c -> c#getStaticMethod)) (self :> 'v phpClass)
         method getClassMethod =
-            findWithParents (fun c -> c#getMethod) (self :> 'v phpClass)
+            (findWithParents (fun c -> c#getMethod)) (self :> 'v phpClass)
     end
 
 and ['v] phpObject
@@ -157,6 +149,6 @@ and ['v] phpObject
         method setObjectPropertyVar cc n =
             (findWithParents (fun c name -> self#replaceProperty (c, name)) self#objectClass cc n)
         method getObjectMethod callingClass methodName =
-            self#objectClass#getClassMethod callingClass methodName (self :> 'v phpObject)
+            (self#objectClass#getClassMethod callingClass methodName)#exec (self :> 'v phpObject)
     end
 

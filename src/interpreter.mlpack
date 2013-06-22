@@ -4,6 +4,7 @@ interpreter/PhpArray
 interpreter/Expression
 interpreter/Main
 interpreter/Object
+interpreter/Sig
 interpreter/Compiler
 interpreter/Extension
 

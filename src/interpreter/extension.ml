@@ -2,17 +2,17 @@ let registeredExtensions = Hashtbl.create 10
 
 let register
     (name : string)
-    (constants: (string * (('v PhpArray.phpArray as 'a, 'v Object.phpObject as 'o) Language.Typing.value as 'v)) list)
-    (functions : (string * (('a, 'o, 'c) Compiler.evalContext -> (<get : 'v; set: 'v -> unit> as 'var) list -> 'var)) list)
-    (classes : (string * ('v Object.phpClass as 'c)) list)
-    (initializers : (('a, 'o, 'c) Compiler.evalContext -> unit) list)
+    (constants: (string * Sig.value) list)
+    (functions : (string * (Sig.evalContext -> Sig.variable list -> Sig.variable)) list)
+    (classes : (string * Sig.phpClass) list)
+    (initializers : (Sig.evalContext -> unit) list)
     =
     Hashtbl.replace registeredExtensions name (constants, functions, classes, initializers)
 
-let loadExtenstionsInContext (context : (_,_,_) Compiler.evalContext) =
+let loadExtenstionsInContext (context : Sig.evalContext) =
     let loadExtension name (constants, functions, classes, initializers) =
         List.iter (fun (n, v) -> context#constants#set n v) constants;
-        List.iter (fun (n, f) -> context#functions#add n (f context)) functions;
+        List.iter (fun (n, f) -> context#functions#set n (new Func.baseFunction [] true f)) functions;
         List.iter (fun (n, c) -> context#classes#set n c) classes;
         List.iter (fun f -> f context) initializers
     in

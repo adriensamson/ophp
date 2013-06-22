@@ -15,7 +15,7 @@ class ['v] variableRegistry =
         val parentScope = None
         val staticVariables = Hashtbl.create 10
         val variables = Hashtbl.create 10
-        val functionName = ""
+        val currentFunction = object end
         method find (name : string) =
             try
                 Hashtbl.find variables name
@@ -34,11 +34,11 @@ class ['v] variableRegistry =
             | None -> self#replace name var
             | Some g -> g#replace name var
 
-        method newScope functionName =
+        method newScope obj =
             {< globalScope = if globalScope = None then Some self else globalScope;
             parentScope = Some self;
             variables = Hashtbl.create 10;
-            functionName = functionName >}
+            currentFunction = obj >}
         method addFromParent ?(byRef=false) name =
             match parentScope with
             | None -> failwith "No parent scope"
@@ -54,11 +54,11 @@ class ['v] variableRegistry =
         method addFromStatic name defaultValue =
             let var =
                 try
-                    Hashtbl.find staticVariables (functionName, name)
+                    Hashtbl.find staticVariables (currentFunction, name)
                 with
                 | Not_found ->
                     let v = new variable defaultValue in
-                    Hashtbl.replace staticVariables (functionName, name) v;
+                    Hashtbl.replace staticVariables (currentFunction, name) v;
                     v
             in self#replace name var
     end

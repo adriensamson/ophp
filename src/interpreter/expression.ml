@@ -92,12 +92,14 @@ class type ['v] variable = object
     method set: 'v -> unit
     end
 
+class type obj = object end
+
 class type ['v] variableRegistry = object
     method replace : string -> 'v variable -> unit
     method find : string -> 'v variable
     method replaceSuperglobal : string -> 'v variable -> unit
     method findSuperglobal : string -> 'v variable
-    method newScope : string -> 'v variableRegistry
+    method newScope : obj -> 'v variableRegistry
     method addFromParent : ?byRef:bool -> string -> unit
     method addFromGlobal : string -> unit
     method addFromStatic : string -> 'v -> unit
@@ -106,7 +108,7 @@ class type ['v] variableRegistry = object
 class ['a, 'o, 'c] evalContext
     (constants : ('a, 'o) value Registry.constantRegistry)
     (vars : ('a, 'o) value variableRegistry)
-    (functions : ('a, 'o) value variable Registry.functionRegistry)
+    (functions : ('a, 'o, 'c, ('a, 'o, 'c) evalContext) Func.baseFunction Registry.functionRegistry)
     (classes : 'c Registry.classRegistry)
     (files : ('a, 'o) value Registry.fileRegistry)
     (obj: 'o option)
@@ -156,9 +158,9 @@ class ['a, 'o, 'c] evalContext
             | a::p when a = alias -> parts
             | _ -> f t
         in f namespaceUses
-    method functionScope ?(callingClass: 'c option) ?(obj: 'o option) ?(staticClass: 'c option) functionName =
+    method functionScope ?(callingClass: 'c option) ?(obj: 'o option) ?(staticClass: 'c option) func =
         {<
-            vars = vars#newScope functionName;
+            vars = vars#newScope func;
             callingClass = callingClass;
             obj = obj;
             staticClass = staticClass
@@ -174,7 +176,7 @@ end
 
 let makeContext ?obj ?callingClass ?staticClass ?(namespace=[]) ?(namespaceUses=[]) constants vars functions classes files =
     let c = new evalContext constants vars functions classes files obj callingClass staticClass namespace namespaceUses in
-    c#classes#setAutoload (fun name -> if c#functions#has "__autoload" then ignore (c#functions#exec "__autoload" [new variable (`String name)]) else ());
+    c#classes#setAutoload (fun name -> if c#functions#has "__autoload" then ignore (c#functions#exec "__autoload" c [new variable (`String name)]) else ());
     c
 
 let getSome o = match o with

@@ -1,16 +1,12 @@
 open Interpreter
 
-let (closureClass : (('v PhpArray.phpArray, 'v Object.phpObject)  Language.Typing.value as 'v) Object.phpClass)
-    = new Object.phpClass "Closure" false false true false None [] [] [] [("__construct", Language.Typing.Private, fun _ _ _ -> failwith "Non instanciable")] [] []
-class type ['v] variable = object
-    method get: 'v
-    method set: 'v -> unit
-    end
+let (closureClass : Sig.phpClass)
+    = new Object.phpClass "Closure" false false true false None [] [] [] [("__construct", Language.Typing.Private, fun _ -> object method exec _ _ = failwith "Non instanciable" end)] [] []
 
 class closureObject
-    (f:(('v PhpArray.phpArray, 'v Object.phpObject) Language.Typing.value as 'v) variable list -> 'v variable)
+    (f: Sig.variable list -> Sig.variable)
 = object (self)
-    inherit [('v PhpArray.phpArray, 'v Object.phpObject)  Language.Typing.value as 'v] Object.phpObject closureClass as parent
+    inherit [Sig.value] Interpreter.Object.phpObject closureClass as parent
     method getObjectMethod callingClass methodName =
         if methodName = "__invoke" then
             f
