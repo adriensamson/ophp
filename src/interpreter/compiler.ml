@@ -63,16 +63,16 @@ let classDef className isStatic isAbstract isFinal isInterface parentName implem
     fun context ->
         let parent = match parentName with None -> None | Some n -> Some (context#classes#get n) in
         let implements = List.map (context#classes#get) implementsNames in
-        context#classes#set
-            className
-            (new Object.phpClass
-                className isStatic isAbstract isFinal isInterface parent implements
-                (List.map (fun c -> c context) constants)
-                (List.map (fun c -> c context) properties)
-                (List.map (fun c -> c context) methods)
-                (List.map (fun c -> c context) staticMethods)
-                abstractMethods
-            );
+        let cl = new Object.phpClass className isStatic isAbstract isFinal isInterface parent implements abstractMethods in
+        List.iter (fun c -> let (name, value) = c context in cl#constants#set name value) constants;
+        List.iter (fun c -> let (name, isStatic, vis, value) = c context in
+                if isStatic
+                then cl#staticProperties#set name (vis, new variable value)
+                else cl#properties#set name (vis, value)
+            ) properties;
+        List.iter (fun c -> let (name, vis, f) = c context in cl#staticMethods#set name (vis, f cl)) staticMethods;
+        List.iter (fun c -> let (name, vis, f) = c context in cl#methods#set name (vis, f cl)) methods;
+        context#classes#set className cl;
         NoOp
 let is_break op = match op with Break _ -> true | _ -> false
 let getSome o = match o with

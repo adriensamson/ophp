@@ -1,3 +1,4 @@
+interpreter/Bag
 interpreter/Registry
 interpreter/Variable
 interpreter/PhpArray

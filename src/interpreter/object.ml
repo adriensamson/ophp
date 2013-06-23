@@ -37,18 +37,21 @@ class ['v] phpClass
     (isInterface : bool)
     (parent : 'v phpClass option)
     (implements : 'v phpClass list)
-    (constantsL : (string * 'v) list)
-    (propertiesL : (string * bool * Language.Typing.visibility * 'v) list)
-    (methodsL : (string * Language.Typing.visibility * ('v phpClass -> < exec : 'v phpObject -> 'v variable list -> 'v variable >)) list)
-    (staticMethodsL : (string * Language.Typing.visibility * ('v phpClass -> < exec : 'v phpClass -> 'v variable list -> 'v variable >)) list)
     (abstractMethods : (string * bool * bool * Language.Typing.visibility * (string * bool * Language.Ast.typeHint) list) list)
     = object (self)
     
-        val staticProperties = new Bag.bag 10
-        val staticMethods = new Bag.bag 10
-        val methods = new Bag.bag 10
-        val constants = new Bag.bag 10
+        val staticProperties = ((new Bag.bag 10) : (string, visibility * 'v variable) Bag.bag)
+        val staticMethods = ((new Bag.bag 10) : (string, visibility * < exec : 'v phpClass -> 'v variable list -> 'v variable >) Bag.bag)
+        val methods = ((new Bag.bag 10) : (string, visibility * < exec : 'v phpObject -> 'v variable list -> 'v variable >) Bag.bag)
+        val constants = ((new Bag.bag 10) : (string, 'v) Bag.bag)
+        val properties = ((new Bag.bag 10) : (string, visibility * 'v) Bag.bag)
 
+        method staticProperties = staticProperties
+        method staticMethods = staticMethods
+        method methods = methods
+        method constants = constants
+        method properties = properties
+        
         method name = name
         method abstract = isAbstract
         method static = isStatic
@@ -95,14 +98,9 @@ class ['v] phpClass
                     | None -> ()
                     | Some c -> c#initObject o
             end;
-            o#addProperties (self :> 'v phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL))
-        
-        initializer
-            List.iter (fun (name, value) -> constants#set name value) constantsL;
-            List.iter (fun (name, _, vis, value) -> staticProperties#set name (vis, new variable value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
-            List.iter (fun (name, vis, f) -> staticMethods#set name (vis, f (self :> 'v phpClass))) staticMethodsL;
-            List.iter (fun (name, vis, f) -> methods#set name (vis, f (self :> 'v phpClass))) methodsL
-        
+            o#addProperties
+                (self :> 'v phpClass)
+                (List.map (fun (name, (vis, value)) -> (name, vis, value)) properties#all)
         
         method getClassConstant name =
             try

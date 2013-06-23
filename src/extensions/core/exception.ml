@@ -12,19 +12,14 @@ let exceptionConstruct self = object method exec obj args =
 end
 
 let (exceptionClass : (('v PhpArray.phpArray, 'v Object.phpObject)  Language.Typing.value as 'v) Object.phpClass)
-    = new Object.phpClass "Exception" false false false false None []
-    []
-    [
-        ("message", false, Language.Typing.Protected, `Null);
-        ("code", false, Language.Typing.Protected, `Null);
-        ("previous", false, Language.Typing.Private, `Null)
-    ]
-    [
-        ("__construct", Language.Typing.Public, exceptionConstruct);
-        ("getMessage", Language.Typing.Public, fun self -> object method exec obj args = obj#getObjectPropertyVar (Some self) "message" end)
-    ]
-    []
-    []
+    = new Object.phpClass "Exception" false false false false None [] []
+    
+let _ =
+    exceptionClass#properties#set "message" (Language.Typing.Protected, `Null);
+    exceptionClass#properties#set "code" (Language.Typing.Protected, `Null);
+    exceptionClass#properties#set "previous" (Language.Typing.Private, `Null);
+    exceptionClass#methods#set "__construct" (Language.Typing.Public, exceptionConstruct exceptionClass);
+    exceptionClass#methods#set "getMessage" (Language.Typing.Public, object method exec obj args = obj#getObjectPropertyVar (Some exceptionClass) "message" end)
 
 let _ = Extension.register
     "core/exception"

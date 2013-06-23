@@ -1,7 +1,9 @@
 open Interpreter
 
 let (closureClass : Sig.phpClass)
-    = new Object.phpClass "Closure" false false true false None [] [] [] [("__construct", Language.Typing.Private, fun _ -> object method exec _ _ = failwith "Non instanciable" end)] [] []
+    = new Object.phpClass "Closure" false false true false None [] []
+
+let _ = closureClass#methods#set "__construct" (Language.Typing.Private, object method exec _ _ = failwith "Non instanciable" end)
 
 class closureObject
     (f: Sig.variable list -> Sig.variable)
