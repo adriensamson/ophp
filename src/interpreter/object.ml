@@ -44,10 +44,11 @@ class ['v] phpClass
     (abstractMethods : (string * bool * bool * Language.Typing.visibility * (string * bool * Language.Ast.typeHint) list) list)
     = object (self)
     
-        val staticProperties = Hashtbl.create 10
-        val staticMethods = Hashtbl.create 10
-        val methods = Hashtbl.create 10
-        val constants = Hashtbl.create 10
+        val staticProperties = new Bag.bag 10
+        val staticMethods = new Bag.bag 10
+        val methods = new Bag.bag 10
+        val constants = new Bag.bag 10
+
         method name = name
         method abstract = isAbstract
         method static = isStatic
@@ -61,20 +62,20 @@ class ['v] phpClass
             | Some p -> p#instanceOf c
         
         method getConstant constantName =
-            Hashtbl.find constants constantName
+            constants#get constantName
         
         method findStaticProperty propName =
-            Hashtbl.find staticProperties propName
+            staticProperties#get propName
         
         method replaceStaticProperty propName =
-            let (vis, _) = Hashtbl.find staticProperties propName in
-            (vis, fun value -> Hashtbl.replace staticProperties propName (vis, value))
+            let (vis, _) = staticProperties#get propName in
+            (vis, fun value -> staticProperties#set propName (vis, value))
         
         method getStaticMethod methodName =
-            Hashtbl.find staticMethods methodName
+            staticMethods#get methodName
         
         method getMethod methodName =
-            Hashtbl.find methods methodName
+            methods#get methodName
         
         method newObject l cc =
             let o = new phpObject (self :> 'v phpClass) in
@@ -97,10 +98,10 @@ class ['v] phpClass
             o#addProperties (self :> 'v phpClass) (List.map (fun (name, _, vis, value) -> (name, vis, value)) (List.filter (fun (_, isStatic, _, _) -> not isStatic) propertiesL))
         
         initializer
-            List.iter (fun (name, value) -> Hashtbl.replace constants name value) constantsL;
-            List.iter (fun (name, _, vis, value) -> Hashtbl.replace staticProperties name (vis, new variable value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
-            List.iter (fun (name, vis, f) -> Hashtbl.replace staticMethods name (vis, f (self :> 'v phpClass))) staticMethodsL;
-            List.iter (fun (name, vis, f) -> Hashtbl.replace methods name (vis, f (self :> 'v phpClass))) methodsL
+            List.iter (fun (name, value) -> constants#set name value) constantsL;
+            List.iter (fun (name, _, vis, value) -> staticProperties#set name (vis, new variable value)) (List.filter (fun (_, isStatic, _, _) -> isStatic) propertiesL);
+            List.iter (fun (name, vis, f) -> staticMethods#set name (vis, f (self :> 'v phpClass))) staticMethodsL;
+            List.iter (fun (name, vis, f) -> methods#set name (vis, f (self :> 'v phpClass))) methodsL
         
         
         method getClassConstant name =
@@ -125,20 +126,20 @@ class ['v] phpClass
 and ['v] phpObject
     objectClass
     = object (self)
-        val properties = Hashtbl.create 10;
+        val properties = new Bag.bag 10;
         
         method objectClass = objectClass
         method instanceOf = objectClass#instanceOf
         
         method findProperty prop =
-            Hashtbl.find properties prop
+            properties#get prop
             
         method replaceProperty prop =
-            let (vis, _) = Hashtbl.find properties prop in
-            (vis, fun value -> Hashtbl.replace properties prop (vis, value))
+            let (vis, _) = properties#get prop in
+            (vis, fun value -> properties#set prop (vis, value))
         
         method addProperties phpClass propertiesL =
-            List.iter (fun (name, vis, value) -> Hashtbl.replace properties (phpClass, name) (vis, new variable value)) propertiesL
+            List.iter (fun (name, vis, value) -> properties#set (phpClass, name) (vis, new variable value)) propertiesL
         
         method getObjectProperty cc n =
             (findWithParents (fun c name -> self#findProperty (c, name)) self#objectClass cc n)#get
