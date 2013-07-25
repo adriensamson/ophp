@@ -5,8 +5,8 @@ set -e
 cd $(dirname $0)
 
 EXTENSIONS=$(echo extensions/{core,spl,compat}.cm{o,xs})
-TARGET=main
-FLAGS="-libs str,dynlink,unix,fileutils -cflags -I,+fileutils -lflags -I,+fileutils"
+TARGET=cli
+FLAGS="-use-ocamlfind"
 FLAGS="$FLAGS -yaccflag -v"
 OCAMLBUILD=ocamlbuild
 

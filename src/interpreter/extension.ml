@@ -18,6 +18,6 @@ let loadExtenstionsInContext (context : Sig.evalContext) =
     in
     Hashtbl.iter loadExtension registeredExtensions
 
-let loadFile filename =
-    Dynlink.loadfile (Dynlink.adapt_filename filename)
+let loadFile filename = ()
+(*    Dynlink.loadfile (Dynlink.adapt_filename filename)*)
 
