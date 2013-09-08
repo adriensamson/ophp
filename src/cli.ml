@@ -1,6 +1,7 @@
 open Core
 open Spl
 open Compat
+open Dom
 
 let main () =
     let self = FileUtil.readlink Sys.executable_name in

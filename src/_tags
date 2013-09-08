@@ -3,6 +3,9 @@
 <syntax/*.cmx>: for-pack(Syntax)
 <extensions/core/*.cmx>: for-pack(Core)
 
+<extensions/dom.*>: package(gdome2)
+<cli.*>: package(gdome2)
+
 true: package(unix), use_dynlink, use_str, package(fileutils)
 
 true: debug

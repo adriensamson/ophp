@@ -4,7 +4,7 @@ set -e
 
 cd $(dirname $0)
 
-EXTENSIONS=$(echo extensions/{core,spl,compat}.cm{o,xs})
+EXTENSIONS=$(echo extensions/{core,spl,compat,dom}.cm{o,xs})
 TARGET=cli
 FLAGS="-use-ocamlfind"
 FLAGS="$FLAGS -yaccflag -v"
